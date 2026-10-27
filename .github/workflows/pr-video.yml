@@ -1,0 +1,190 @@
+name: pr-video
+
+# SIN-1159: Playwright-E2E mit Video je PR. GIF (inline) und webm landen auf dem Waisen-Branch `pr-media`,
+# dazu ein Sticky-Kommentar mit Tabelle. Aufruf und Voraussetzungen: docs/pr-video.md.
+# Fork-PRs: Tests laufen ohne Secrets, Medien und Kommentar entfallen (keine Schreib-Tokens).
+on:
+  workflow_call:
+    inputs:
+      vercel-preview:
+        description: Gegen die Vercel-Preview des PR-Commits testen (wartet bis 10 min), sonst lokal `npm run build && npm start`.
+        type: boolean
+        default: false
+    secrets:
+      VERCEL_AUTOMATION_BYPASS_SECRET:
+        required: false
+
+permissions: {}
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      deployments: read
+    outputs:
+      base-url: ${{ steps.ziel.outputs.url }}
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Vercel-Preview suchen
+        id: ziel
+        if: inputs.vercel-preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Vercel meldet jede Preview als GitHub-Deployment zum Commit.
+          for i in $(seq 30); do
+            url=$(gh api "repos/$GITHUB_REPOSITORY/deployments?sha=$SHA" --jq '.[].statuses_url' |
+              while read -r s; do gh api "$s" --jq '[.[] | select(.state == "success")][0].target_url // empty'; done | head -n1)
+            if [ -n "$url" ]; then echo "url=$url" >> "$GITHUB_OUTPUT"; exit 0; fi
+            sleep 20
+          done
+          echo "::warning::Keine Vercel-Preview für $SHA gefunden, teste lokal."
+      - run: npx playwright install --with-deps chromium
+      - name: Playwright mit Video
+        env:
+          BASE_URL: ${{ steps.ziel.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          # Hülle um die Playwright-Konfiguration der App: Video an, JSON-Report, Ziel-URL oder lokaler Server.
+          # shortcut: `use` in projects überschreibt video/baseURL, dann dort setzen.
+          cat > playwright.pr-video.config.ts <<'EOF'
+          import base from "./playwright.config";
+          const url = process.env.BASE_URL;
+          const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+          export default {
+            ...base,
+            outputDir: "pr-video/results",
+            reporter: [["list"], ["json", { outputFile: "pr-video/report.json" }]],
+            use: {
+              ...base.use,
+              video: "on",
+              baseURL: url || base.use?.baseURL || "http://localhost:3000",
+              ...(url && bypass && { extraHTTPHeaders: { ...base.use?.extraHTTPHeaders, "x-vercel-protection-bypass": bypass, "x-vercel-set-bypass-cookie": "true" } }),
+            },
+            webServer: url ? undefined : base.webServer ?? { command: "npm run build && npm start", url: "http://localhost:3000", timeout: 300_000 },
+          };
+          EOF
+          npx playwright test --config playwright.pr-video.config.ts
+      - name: Videos zu GIF
+        if: ${{ !cancelled() && hashFiles('pr-video/report.json') != '' }}
+        run: |
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; }
+          node - <<'EOF'
+          const fs = require("fs"), { execFileSync } = require("child_process");
+          const report = JSON.parse(fs.readFileSync("pr-video/report.json", "utf8"));
+          const tests = [];
+          const walk = (suite) => {
+            for (const s of suite.suites ?? []) walk(s);
+            for (const spec of suite.specs ?? []) for (const t of spec.tests) {
+              const r = t.results.at(-1), video = r?.attachments.find((a) => a.name === "video")?.path;
+              const n = String(tests.length + 1).padStart(2, "0"), e = { title: `${spec.file} › ${spec.title}`, status: t.status, duration: r?.duration ?? 0 };
+              if (video) {
+                fs.copyFileSync(video, `pr-video/out/${n}.webm`);
+                const vf = "fps=8,scale=640:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse";
+                execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-i", video, "-t", "30", "-vf", vf, "-loop", "0", `pr-video/out/${n}.gif`]);
+                Object.assign(e, { webm: `${n}.webm`, gif: `${n}.gif` });
+              }
+              tests.push(e);
+            }
+          };
+          fs.mkdirSync("pr-video/out", { recursive: true });
+          walk(report);
+          fs.writeFileSync("pr-video/out/summary.json", JSON.stringify({ duration: report.stats.duration, tests }, null, 2));
+          EOF
+      - uses: actions/upload-artifact@v4
+        id: upload
+        if: ${{ !cancelled() && hashFiles('pr-video/out/summary.json') != '' }}
+        with:
+          name: pr-video
+          path: pr-video/
+          retention-days: 14
+
+  media:
+    needs: e2e
+    if: ${{ !cancelled() && needs.e2e.outputs.artifact-url != '' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pr-video
+          path: pr-video
+      - name: Medien auf Branch pr-media
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIR: pr-${{ github.event.pull_request.number }}/${{ github.event.pull_request.head.sha }}
+        run: |
+          gh auth setup-git
+          git init -q media && cd media
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          # Parallele PRs: bei abgelehntem Push neu auf den aktuellen Stand setzen und erneut versuchen.
+          for i in 1 2 3 4 5; do
+            if git fetch -q --depth 1 origin pr-media; then git checkout -q -B pr-media FETCH_HEAD; else git checkout -q --orphan "neu$i"; fi
+            mkdir -p "$DIR" && cp ../pr-video/out/* "$DIR"/
+            git add -A && { git diff --cached --quiet || git commit -qm "media: $DIR"; }
+            git push -q origin HEAD:pr-media && exit 0
+            sleep $((i * 3))
+          done
+          exit 1
+
+  comment:
+    needs: [e2e, media]
+    if: ${{ !cancelled() && needs.media.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pr-video
+          path: pr-video
+      - name: Sticky-Kommentar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_URL: ${{ needs.e2e.outputs.base-url }}
+          ARTIFACT: ${{ needs.e2e.outputs.artifact-url }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node - > body.md <<'EOF'
+          const { tests, duration } = require(`${process.cwd()}/pr-video/out/summary.json`);
+          const { GITHUB_REPOSITORY, PR, SHA, BASE_URL, ARTIFACT, RUN } = process.env;
+          const raw = (f) => `https://github.com/${GITHUB_REPOSITORY}/blob/pr-media/pr-${PR}/${SHA}/${f}?raw=true`;
+          const sec = (ms) => `${(ms / 1000).toFixed(1)} s`;
+          const label = { expected: "✅ bestanden", flaky: "⚠️ wackelig", unexpected: "❌ fehlgeschlagen", skipped: "⏭️ übersprungen" };
+          const title = (t) => t.title.replace(/\|/g, "\\|");
+          const ok = tests.filter((t) => t.status === "expected" || t.status === "flaky").length;
+          console.log([
+            "<!-- pr-video -->",
+            `### E2E mit Video: ${ok}/${tests.length} bestanden`,
+            `Commit \`${SHA.slice(0, 7)}\` · Ziel: ${BASE_URL || "lokal (`npm run build && npm start`)"} · Gesamtdauer ${sec(duration)} · [Lauf](${RUN}) · [Artefakt mit Videos und Report](${ARTIFACT})`,
+            "",
+            "| Test | Ergebnis | Dauer | Video |",
+            "|---|---|---|---|",
+            ...tests.map((t) => `| ${title(t)} | ${label[t.status] ?? t.status} | ${sec(t.duration)} | ${t.webm ? `[webm](${raw(t.webm)})` : "–"} |`),
+            ...tests.filter((t) => t.gif).flatMap((t) => ["", `**${title(t)}**`, "", `![${title(t)}](${raw(t.gif)})`]),
+          ].join("\n"));
+          EOF
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq '.[] | select(.body | startswith("<!-- pr-video -->")) | .id' | head -n1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@body.md > /dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@body.md > /dev/null
+          fi

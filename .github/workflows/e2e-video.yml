@@ -9,7 +9,9 @@ concurrency:
 
 jobs:
   video:
-    uses: siinanXD/leitstand-2/.github/workflows/pr-video.yml@claude/sin-1159-pr-video
+    # Lifestyle-APP ist öffentlich, leitstand-2 privat: der Aufruf über die Repo-Grenze scheitert
+    # ("workflow was not found"), daher für die Demo eine unveränderte Kopie.
+    uses: ./.github/workflows/pr-video.yml
     permissions:
       contents: write
       pull-requests: write
