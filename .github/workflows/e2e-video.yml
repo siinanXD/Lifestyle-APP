@@ -1,0 +1,16 @@
+name: e2e-video
+
+# SIN-1159 Demo: ruft den wiederverwendbaren Workflow aus leitstand-2 auf (docs/pr-video.md dort).
+on: pull_request
+
+concurrency:
+  group: e2e-video-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  video:
+    uses: siinanXD/leitstand-2/.github/workflows/pr-video.yml@claude/sin-1159-pr-video
+    permissions:
+      contents: write
+      pull-requests: write
+      deployments: read
