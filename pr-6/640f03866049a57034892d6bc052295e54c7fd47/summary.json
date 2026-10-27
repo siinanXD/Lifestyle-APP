@@ -1,0 +1,12 @@
+{
+  "duration": 11587.980000000001,
+  "tests": [
+    {
+      "title": "demo.spec.ts › Startseite und Demo-Zähler",
+      "status": "expected",
+      "duration": 1651,
+      "webm": "01.webm",
+      "gif": "01.gif"
+    }
+  ]
+}
