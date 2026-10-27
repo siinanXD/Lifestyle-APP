@@ -1,6 +1,6 @@
 # Lifestyle App — AI Lifestyle Coach
 
-**Status: Planung / keine Implementierung.** Geschlossene Beta für 10 kostenlose Testpersonen. PWA, FastAPI, PostgreSQL, Docker Compose, später optionales Premium-Abo.
+**Status: Bau freigegeben (27.10.2026), noch keine Implementierung.** Geschlossene Beta für 10 kostenlose Testpersonen. Next.js-PWA auf Vercel, Supabase (Schema `lifestyle`, RLS), später optionales Premium-Abo.
 
 ## Vision
 Eine ruhige, moderne, schnelle und unkomplizierte Lifestyle-App: gesund leben, besser aussehen, fit werden, ohne Perfektionsdruck. Nutzer beschreiben Ziele in Alltagssprache (z. B. breitere Schultern, mehr Ausdauer). Der Coach erklärt wenige wirksame Übungen verständlich und respektvoll.
@@ -17,10 +17,10 @@ Eine ruhige, moderne, schnelle und unkomplizierte Lifestyle-App: gesund leben, b
 - KI erklärt und unterstützt; regelbasierte, testbare Trainings-Engine entscheidet über belastungsbezogene Vorschläge. KI-Ausfall blockiert Tracking nicht.
 
 ## Technischer Zielzustand
-Installierbare React/TypeScript-PWA mit Offline-Trainingsprotokoll und sicherer Synchronisierung; FastAPI/Pydantic; PostgreSQL/SQLAlchemy/Alembic; privater Objektspeicher; persistente Hintergrundjobs; Docker Compose für Self-Hosting. Anbieterunabhängige KI-Schnittstelle mit Quoten, Kostenlimits und menschlich korrigierbaren Ergebnissen.
+Installierbare Next.js/TypeScript-PWA mit Offline-Trainingsprotokoll und sicherer Synchronisierung; Supabase Auth, Postgres mit RLS (Schema `lifestyle`, Migrationen in `supabase/`), privater Storage, Hintergrundjobs über Supabase Queues/pg_cron; Self-Hosting später über selbst gehostetes Supabase. Stackentscheidung und Regeln: `AGENTS.md`. Anbieterunabhängige KI-Schnittstelle mit Quoten, Kostenlimits und menschlich korrigierbaren Ergebnissen.
 
 ## Roadmap (Schätzung, keine Zusage)
-1. W1–2: Architektur, UX, Auth, PWA, Datenschutzkonzept, Docker/CI.
+1. W1–2: Architektur, UX, Auth, PWA, Datenschutzkonzept, CI.
 2. W3–5: Übungsbibliothek, Training, Cardio, Animationen, Progression, Offline-Sync.
 3. W6–8: Ernährung, Schlaf, Gewohnheiten, Ziele, Fortschritt, private Fotos.
 4. W9–11: KI-Coach, Geräte-/Essensbilder, Wochenberichte, Smart Comeback.
@@ -37,6 +37,6 @@ DSGVO-Prüfung inkl. möglicher Gesundheitsdaten nach Art. 9, Einwilligungen wo 
 Erste 10 Testpersonen: alle Funktionen kostenlos; Stripe ausschließlich Testmodus. Später vollständige Free-/Self-hosted-Basis und optionale kostenpflichtige Cloud-Komfort-/KI-Funktionen. Preis erst anhand Nutzung und Kosten validieren.
 
 ## Leitstand-Handoff
-**Nur geplant, nicht zur Ausführung freigegeben.** Vor Umsetzung Gedächtnis ↔ Linear ↔ Code/PRs abgleichen, Deltas in kleine unabhängige Issues zerlegen, mit Tests und Abnahmebelegen. Keine automatischen Worker, Deployments, bezahlten API-Aufrufe oder neuen Secrets starten. Sicherheitsgates nicht umgehen. Implementierung erst nach ausdrücklicher Freigabe und wiederhergestelltem Leitstand.
+**Freigegeben am 27.10.2026 durch Sinan:** Agenten bauen autonom aus Linear nach `AGENTS.md`. Vor Umsetzung Gedächtnis ↔ Linear ↔ Code/PRs abgleichen, Deltas in kleine unabhängige Issues zerlegen, mit Tests und Abnahmebelegen. Keine bezahlten API-Aufrufe, kein Produktiv-Deployment und keine neuen Secrets ohne Sinan. Sicherheitsgates nicht umgehen.
 
 Siehe Linear-Projekt »Lifestyle App« für Planung und Arbeitspakete.
