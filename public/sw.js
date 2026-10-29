@@ -1,12 +1,13 @@
-// Cached nur die App-Hülle: Startseite, Manifest, Icons und statische Next-Assets. Keine API-/Nutzerdaten.
+// Cached nur die App-Hülle: Anmeldeseite, Manifest, Icons und statische Next-Assets. Keine API-/Nutzerdaten.
+// "/" liegt hinter dem Route-Schutz (Weiterleitung auf /login); eine weitergeleitete Antwort darf der Worker nicht für Navigationen ausliefern.
 const CACHE = "shell-v1";
-const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
+const SHELL = ["/login", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 // Die Seite hat ihre JS/CSS-Dateien schon geladen, bevor der Worker aktiv wird: aus dem HTML nachholen.
 async function precache() {
   const cache = await caches.open(CACHE);
   await cache.addAll(SHELL);
-  const html = await (await cache.match("/")).text();
+  const html = await (await cache.match("/login")).text();
   const assets = [...new Set(html.match(/\/_next\/static\/[^"'\\\s)]+/g) ?? [])];
   await cache.addAll(assets);
 }
@@ -29,8 +30,8 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
-    // Startseite: Netzwerk zuerst, offline die zwischengespeicherte Hülle.
-    event.respondWith(fetch(request).catch(() => caches.match("/")));
+    // Netzwerk zuerst, offline die zwischengespeicherte Hülle.
+    event.respondWith(fetch(request).catch(() => caches.match("/login")));
   } else if (url.pathname.startsWith("/_next/static/") || SHELL.includes(url.pathname)) {
     // Unveränderliche, gehashte Assets: Cache zuerst, beim ersten Treffer nachladen.
     event.respondWith(

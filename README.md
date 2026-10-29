@@ -19,6 +19,15 @@ Eine ruhige, moderne, schnelle und unkomplizierte Lifestyle-App: gesund leben, b
 ## Technischer Zielzustand
 Installierbare Next.js/TypeScript-PWA mit Offline-Trainingsprotokoll und sicherer Synchronisierung; Supabase Auth, Postgres mit RLS (Schema `lifestyle`, Migrationen in `supabase/`), privater Storage, Hintergrundjobs über Supabase Queues/pg_cron; Self-Hosting später über selbst gehostetes Supabase. Stackentscheidung und Regeln: `AGENTS.md`. Anbieterunabhängige KI-Schnittstelle mit Quoten, Kostenlimits und menschlich korrigierbaren Ergebnissen.
 
+## Lokal starten und einloggen
+Voraussetzung: Node 22, Docker, Supabase CLI.
+1. `npm ci`
+2. `supabase start` (Migrationen laufen automatisch). Unter Windows sind die Ports 54278–54377 oft reserviert; dann in `supabase/config.toml` lokal andere Ports setzen (nicht committen).
+3. `supabase status -o env` zeigt API-URL und Publishable Key. Beide als `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY` setzen (Namen: `.env.example`).
+4. `npm run dev`, dann `http://localhost:3000` öffnen (nicht `127.0.0.1`, sonst blockiert der Dev-Server das Laden des JavaScripts).
+5. Ohne Sitzung leitet `/` auf `/login` um. Unter `/registrieren` ein Konto anlegen (lokal ohne E-Mail-Bestätigung, Passwort mindestens 6 Zeichen), danach landest du auf der Startseite. „Abmelden“ beendet die Sitzung.
+Beim ersten Login legt die App deine eigene Zeile in `lifestyle.profiles` an (RLS erlaubt nur `id = auth.uid()`).
+
 ## Roadmap (Schätzung, keine Zusage)
 1. W1–2: Architektur, UX, Auth, PWA, Datenschutzkonzept, CI.
 2. W3–5: Übungsbibliothek, Training, Cardio, Animationen, Progression, Offline-Sync.
