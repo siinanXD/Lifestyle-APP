@@ -19,6 +19,13 @@ Eine ruhige, moderne, schnelle und unkomplizierte Lifestyle-App: gesund leben, b
 ## Technischer Zielzustand
 Installierbare Next.js/TypeScript-PWA mit Offline-Trainingsprotokoll und sicherer Synchronisierung; Supabase Auth, Postgres mit RLS (Schema `lifestyle`, Migrationen in `supabase/`), privater Storage, Hintergrundjobs über Supabase Queues/pg_cron; Self-Hosting später über selbst gehostetes Supabase. Stackentscheidung und Regeln: `AGENTS.md`. Anbieterunabhängige KI-Schnittstelle mit Quoten, Kostenlimits und menschlich korrigierbaren Ergebnissen.
 
+## Live testen
+Jeder PR bekommt von Vercel eine Preview-URL (Kommentar des Vercel-Bots im PR), `main` geht nach Merge in Produktion. Beide laufen gegen das gemeinsame Supabase-Projekt, Daten liegen im Schema `lifestyle` (RLS).
+- Produktion: https://lifestyle-app-silk.vercel.app
+- Testzugang: Sinans Testkonto, `TESTNUTZER_EMAIL` / `TESTNUTZER_PASSWORT` in Infisical `/leitstand` (Auth gilt projektweit, das Konto gibt es schon). Das Passwort steht nie in Repo oder PR.
+- Ablauf: `/login` öffnen, mit dem Testkonto anmelden → Startseite → „Abmelden“. Nur Test- und Platzhalterdaten eintragen, keine echten Gesundheitsdaten (AGENTS.md Regel 6).
+- Neue Migrationen spielt `.github/workflows/migrate.yml` nach Merge ein (Einrichtung: `docs/INFRASTRUCTURE.md`).
+
 ## Lokal starten und einloggen
 Voraussetzung: Node 22, Docker, Supabase CLI.
 1. `npm ci`

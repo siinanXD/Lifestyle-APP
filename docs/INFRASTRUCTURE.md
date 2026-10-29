@@ -14,3 +14,8 @@
 - Klick: Dashboard → Project Settings → API → „Exposed schemas“ → `lifestyle` hinzufügen → Save. Bei „Extra search path“ ebenfalls `lifestyle` ergänzen.
 - Prüfen: `curl -H "apikey: <anon key>" -H "Accept-Profile: lifestyle" "<project url>/rest/v1/profiles?select=id"` liefert ohne Anmeldung 401/403 (RLS, anon ohne Zugriff), nicht 406.
 - Agenten führen nichts gegen die Cloud aus.
+
+## Vercel und Migrations-Workflow (SIN-1195, 29.10.2026)
+- Vercel-Projekt `lifestyle-app` (Hobby, Team siinanxds-projects) ist mit dem Repo verbunden: Preview je PR, Produktion aus `main`. Umgebungsvariablen: nur die Namen aus `.env.example`; Werte kommen aus der Supabase-Integration bzw. Infisical. Kein Service-Role-Key in Vercel, die App liest ihn nicht.
+- `.github/workflows/migrate.yml` läuft bei Änderungen unter `supabase/migrations` auf `main`: prüft mit `scripts/check-migration-schemas.mjs`, dass nur Schema `lifestyle` angefasst wird (derselbe Check läuft in `build.yml` für jeden PR), und spielt fehlende Migrationen per `psql` ein. Kein `supabase db push` (das Projekt enthält Migrationen anderer Apps), kein `db reset`, kein `drop schema`.
+- Einrichtung durch Sinan (Label `sinan`): GitHub-Secret `LIFESTYLE_DATABASE_URL` aus Infisical anlegen. Es muss die Session-Pooler-URL sein (GitHub-Runner haben kein IPv6, die direkte URL geht nicht) einer eigenen Rolle, die nur Schema `lifestyle` besitzt, `references` auf `auth.users` hat und in `supabase_migrations.schema_migrations` einfügen darf. Ohne Secret schlägt der Workflow sichtbar fehl.
