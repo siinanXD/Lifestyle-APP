@@ -28,6 +28,12 @@ Voraussetzung: Node 22, Docker, Supabase CLI.
 5. Ohne Sitzung leitet `/` auf `/login` um. Unter `/registrieren` ein Konto anlegen (lokal ohne E-Mail-Bestätigung, Passwort mindestens 6 Zeichen), danach landest du auf der Startseite. „Abmelden“ beendet die Sitzung.
 Beim ersten Login legt die App deine eigene Zeile in `lifestyle.profiles` an (RLS erlaubt nur `id = auth.uid()`).
 
+### Anmeldung (SIN-1198)
+- `/login`: E-Mail + Passwort (mit „Passwort anzeigen“), „Link per E-Mail schicken“ (Magic-Link nur für bestehende Konten), „Mit Google anmelden“. `/registrieren` verlangt die Zustimmung zu den Datenschutzhinweisen (Zeitstempel in den Nutzerdaten als `lifestyle_privacy_consent_at`).
+- `/passwort-vergessen` schickt den Link, `/passwort-neu` setzt das neue Passwort. Alle Mail-Links und der Google-Login laufen über `/auth/callback` und tragen die eigene Origin als `emailRedirectTo`/`redirectTo` (die Site-URL des gemeinsamen Projekts gehört der Lernapp). Jede Origin muss in der `uri_allow_list` des gemeinsamen Projekts stehen.
+- `/konto`: Passwort ändern und „Konto löschen“. Löschen ruft `lifestyle.delete_own_data()` auf und entfernt nur die Lifestyle-Daten; das Auth-Konto bleibt, weil es mit anderen Apps geteilt ist. Neue Tabellen mit Nutzerdaten gehören in diese Funktion.
+- Lokal landen Mails in Mailpit (`supabase status`, Inbucket-/Mailpit-URL). Google ist lokal nicht eingerichtet und nur im gemeinsamen Projekt aktiv.
+
 ## Roadmap (Schätzung, keine Zusage)
 1. W1–2: Architektur, UX, Auth, PWA, Datenschutzkonzept, CI.
 2. W3–5: Übungsbibliothek, Training, Cardio, Animationen, Progression, Offline-Sync.

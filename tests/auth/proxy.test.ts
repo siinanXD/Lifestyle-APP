@@ -18,3 +18,17 @@ describe("proxy (Route-Schutz)", () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe("proxy (SIN-1198)", () => {
+  useSupabaseEnv();
+
+  test.each(["/passwort-vergessen", "/auth/callback"])("lässt %s ohne Sitzung durch", async (path) => {
+    const res = await proxy(new NextRequest(`http://localhost:3000${path}`));
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  test.each(["/passwort-neu", "/konto"])("schützt %s ohne Sitzung", async (path) => {
+    const res = await proxy(new NextRequest(`http://localhost:3000${path}`));
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+  });
+});

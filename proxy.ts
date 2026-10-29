@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_SCHEMA, supabaseEnv } from "./lib/supabase/env";
 
-const PUBLIC_PATHS = ["/login", "/registrieren"];
+const PUBLIC_PATHS = ["/login", "/registrieren", "/passwort-vergessen", "/auth/callback"];
 
 export async function proxy(request: NextRequest) {
   const { url, anonKey } = supabaseEnv();
