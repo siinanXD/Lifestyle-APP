@@ -1,5 +1,6 @@
 import { AuthForm } from "../auth-form";
 
-export default function LoginPage() {
-  return <AuthForm mode="login" />;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ fehler?: string }> }) {
+  const { fehler } = await searchParams;
+  return <AuthForm mode="login" linkError={fehler === "link"} />;
 }
