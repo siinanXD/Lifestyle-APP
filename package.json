@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "testdaten": "node scripts/testdaten.mjs seed",
+    "testdaten:reset": "node scripts/testdaten.mjs reset"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
