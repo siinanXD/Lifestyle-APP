@@ -26,6 +26,14 @@ Jeder PR bekommt von Vercel eine Preview-URL (Kommentar des Vercel-Bots im PR), 
 - Ablauf: `/login` öffnen, mit dem Testkonto anmelden → Startseite → „Abmelden“. Nur Test- und Platzhalterdaten eintragen, keine echten Gesundheitsdaten (AGENTS.md Regel 6).
 - Neue Migrationen spielt `.github/workflows/migrate.yml` nach Merge ein (Einrichtung: `docs/INFRASTRUCTURE.md`).
 
+## Durchklicken (SIN-1444)
+Zwei Testkonten, damit du nichts erst anlegen musst. Nur Platzhalterdaten, keine echten Gesundheitsdaten.
+- URL: https://lifestyle-app-silk.vercel.app (oder die Preview-URL des PR). Konto 1: `sinan-test@sjcode.de`, Passwort `TESTNUTZER_PASSWORT`. Konto 2 (Prüfung „sieht nichts vom ersten“): `sinan-test-2@sjcode.de`, Passwort `TESTNUTZER2_PASSWORT`. Beide Passwörter nur in Infisical `/leitstand`.
+- Befüllen: `npm run testkonten` mit `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `TESTNUTZER_PASSWORT`, `TESTNUTZER2_PASSWORT` in der Umgebung (Werte aus Infisical). Das Skript meldet sich als die beiden Konten an (kein Service-Key, RLS) und fasst keine anderen Konten an. Zweimal ausführen ergibt denselben Stand.
+- Reset: `npm run testkonten:reset` ersetzt die Beispieldaten beider Konten und stellt den Anfangsstand wieder her.
+- Aktuell gefüllt: Wasser (sieben Tage Verlauf, Konto 1). Plan, Trainings, Essen und Schlaf werden übersprungen und genannt, bis es die Tabellen gibt; dann kommt je ein Eintrag in `lib/testkonten.ts` dazu.
+- Reihenfolge: 1. Skript laufen lassen. 2. Mit Konto 1 anmelden und die gefüllten Seiten ansehen. 3. Abmelden, mit Konto 2 anmelden: leer. 4. Bei Bedarf Reset.
+
 ## Lokal starten und einloggen
 Voraussetzung: Node 22, Docker, Supabase CLI.
 1. `npm ci`
