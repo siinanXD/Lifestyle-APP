@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "testdaten": "node scripts/testdaten.mts befuellen",
+    "testdaten:leeren": "node scripts/testdaten.mts leeren",
+    "testdaten:pruefen": "node scripts/testdaten.mts pruefen",
+    "testdaten:konto2": "node scripts/testdaten.mts konto2"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

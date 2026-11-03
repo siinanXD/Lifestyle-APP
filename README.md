@@ -26,6 +26,16 @@ Jeder PR bekommt von Vercel eine Preview-URL (Kommentar des Vercel-Bots im PR), 
 - Ablauf: `/login` öffnen, mit dem Testkonto anmelden → Startseite → „Abmelden“. Nur Test- und Platzhalterdaten eintragen, keine echten Gesundheitsdaten (AGENTS.md Regel 6).
 - Neue Migrationen spielt `.github/workflows/migrate.yml` nach Merge ein (Einrichtung: `docs/INFRASTRUCTURE.md`).
 
+## Durchklicken (SIN-1444)
+Zwei Testkonten im gemeinsamen Projekt: `sinan-test@sjcode.de` (mit Beispieldaten) und `sinan-test-2@sjcode.de` (leer, für die Prüfung „sieht nichts vom ersten“). Passwörter: `TESTNUTZER_PASSWORT` und `TESTNUTZER2_PASSWORT` in Infisical `/leitstand`, nie in Repo, PR oder Chat. Das Skript nutzt nur die Anmeldung des jeweiligen Kontos (anon-Key, RLS), keinen Service-Key, und weigert sich bei jeder anderen E-Mail. Es erzeugt nur Platzhalterdaten.
+1. Umgebung setzen (Namen: `.env.example`, Werte aus Infisical bzw. `supabase status`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `TESTNUTZER_PASSWORT`, `TESTNUTZER2_PASSWORT`. Node 22.18 oder neuer.
+2. Konto 2 einmalig anlegen, falls es fehlt: `npm run testdaten:konto2` (hängt die Registrierung an der E-Mail-Bestätigung des Projekts, muss Sinan es dort anlegen).
+3. Befüllen: `npm run testdaten`. Löscht die Beispielzeilen der beiden Konten und legt sie neu an (Profil, Wasser über sieben Tage). Mehrfaches Ausführen ergibt denselben Stand. Das ist zugleich der Reset auf den Anfangsstand. Tabellen, die es noch nicht gibt (Pläne, Trainings, Essen, Schlaf), werden übersprungen und in der Ausgabe genannt; sie kommen mit ihren Migrationen dazu.
+4. Leeren ohne Neubefüllung: `npm run testdaten:leeren`.
+5. Prüfen: `npm run testdaten:pruefen` meldet sich als Konto 2 an und erwartet 0 Wasser-Einträge und nur das eigene Profil.
+6. In der App unter der Produktions-URL (siehe „Live testen“) mit dem jeweiligen Konto anmelden. Reihenfolge: erst Konto 1 (gefüllt), dann abmelden, dann Konto 2 (leer).
+Hinweis: Bisher gibt es in der App nur Startseite und `/konto`; Seiten für Wasser, Training usw. folgen mit ihren Issues, dann zeigen sie diese Daten.
+
 ## Lokal starten und einloggen
 Voraussetzung: Node 22, Docker, Supabase CLI.
 1. `npm ci`
