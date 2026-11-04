@@ -23,9 +23,9 @@ export interface SeedTable {
   rows(userId: string, today: Date): Record<string, unknown>[];
 }
 
-const MISSING_TABLE = new Set(["42P01", "PGRST205", "PGRST204"]);
-const isMissing = (e: DbError) =>
-  !!e && (MISSING_TABLE.has(e.code ?? "") || /does not exist|schema cache/i.test(e.message));
+// Nur „Relation fehlt“ (Postgres 42P01, PostgREST PGRST205) heißt „noch keine Tabelle“; jeder andere Fehler bricht ab.
+const MISSING_TABLE = new Set(["42P01", "PGRST205"]);
+const isMissing = (e: DbError) => !!e && MISSING_TABLE.has(e.code ?? "");
 
 // Sieben Tage Wasserverlauf mit festen Uhrzeiten: zwei Läufe am selben Tag ergeben dieselben Zeilen.
 const WASSER_ML = [250, 400, 300, 500, 350, 250];
@@ -86,4 +86,34 @@ export async function seedAccount(
     result.seeded[t.table] = rows.length;
   }
   return result;
+}
+
+type AuthError = { code?: string; message: string } | null;
+type AuthResult = Promise<{ data: { user: { id: string } | null; session: unknown | null }; error: AuthError }>;
+
+/** Schmale Sicht auf `client.auth`. */
+export interface AuthClient {
+  signInWithPassword(c: { email: string; password: string }): AuthResult;
+  signUp(c: { email: string; password: string }): AuthResult;
+}
+
+/**
+ * Meldet das Testkonto an. Nur Konto 2 wird bei falschen Zugangsdaten (`invalid_credentials`) neu angelegt;
+ * jeder andere Fehler, etwa Netzwerk oder Rate-Limit, bricht ab. Ohne Sitzung nach signUp wirft die Funktion:
+ * entweder verlangt das Projekt E-Mail-Bestätigung oder das Konto existiert mit anderem Passwort.
+ */
+export async function anmelden(auth: AuthClient, email: string, password: string): Promise<string> {
+  const login = await auth.signInWithPassword({ email, password });
+  if (!login.error && login.data.user) return login.data.user.id;
+  if (email !== TESTKONTO_2 || login.error?.code !== "invalid_credentials") {
+    throw new Error("Anmeldung fehlgeschlagen (" + (login.error?.message ?? "keine Sitzung") + ").");
+  }
+  const up = await auth.signUp({ email, password });
+  if (up.error) throw new Error("Anlegen fehlgeschlagen (" + up.error.message + ").");
+  if (!up.data.session || !up.data.user) {
+    throw new Error(
+      "Konto existiert mit anderem Passwort oder braucht E-Mail-Bestätigung. Sinan prüft TESTNUTZER2_PASSWORT und das Konto.",
+    );
+  }
+  return up.data.user.id;
 }

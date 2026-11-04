@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { TESTKONTO_1, TESTKONTO_2, seedAccount, type SeedClient } from "../lib/testdaten/seed";
+import { TESTKONTO_1, TESTKONTO_2, anmelden, seedAccount, type AuthClient, type SeedClient } from "../lib/testdaten/seed";
 
 type Row = Record<string, unknown>;
 const ok = { error: null };
@@ -66,5 +66,48 @@ describe("Testdaten-Skript", () => {
     await expect(
       seedAccount(clientFor([], "x"), { email: "jemand@example.com", userId: "x", mode: "seed" }),
     ).rejects.toThrow();
+  });
+});
+
+describe("Testdaten-Skript: Fehler werden nicht verschluckt", () => {
+  test("ein anderer Fehler als „Relation fehlt“ bricht ab statt übersprungen zu werden", async () => {
+    const c: SeedClient = {
+      from: () => ({
+        delete: () => ({
+          eq: () => Promise.resolve({ error: { code: "42501", message: "permission denied" } }),
+          in: () => Promise.resolve({ error: { code: "42501", message: "permission denied" } }),
+        }),
+        insert: () => Promise.resolve({ error: null }),
+      }),
+    };
+    await expect(seedAccount(c, { email: TESTKONTO_1, userId: "u1", mode: "seed", today })).rejects.toThrow("permission denied");
+  });
+
+  const fehler = (code: string) => ({ data: { user: null, session: null }, error: { code, message: code } });
+  const erfolg = { data: { user: { id: "u2" }, session: {} }, error: null };
+  const auth = (login: unknown, up: unknown = erfolg) => {
+    const calls = { signUp: 0 };
+    const a = {
+      signInWithPassword: () => Promise.resolve(login),
+      signUp: () => (calls.signUp++, Promise.resolve(up)),
+    } as unknown as AuthClient;
+    return { a, calls };
+  };
+
+  test("signUp nur bei invalid_credentials und nur für Konto 2", async () => {
+    const { a, calls } = auth(fehler("invalid_credentials"));
+    await expect(anmelden(a, TESTKONTO_2, "pw")).resolves.toBe("u2");
+    expect(calls.signUp).toBe(1);
+
+    const k1 = auth(fehler("invalid_credentials"));
+    await expect(anmelden(k1.a, TESTKONTO_1, "pw")).rejects.toThrow("Anmeldung fehlgeschlagen");
+    const netz = auth(fehler("over_request_rate_limit"));
+    await expect(anmelden(netz.a, TESTKONTO_2, "pw")).rejects.toThrow("Anmeldung fehlgeschlagen");
+    expect(k1.calls.signUp + netz.calls.signUp).toBe(0);
+  });
+
+  test("signUp ohne Sitzung (Bestätigung nötig oder fremdes Passwort) wird gemeldet", async () => {
+    const { a } = auth(fehler("invalid_credentials"), { data: { user: { id: "u2" }, session: null }, error: null });
+    await expect(anmelden(a, TESTKONTO_2, "pw")).rejects.toThrow("E-Mail-Bestätigung");
   });
 });
