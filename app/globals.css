@@ -172,3 +172,8 @@ a {
   font-weight: 700;
   border-top-color: var(--color-primary);
 }
+
+.stack {
+  display: grid;
+  gap: var(--space-4);
+}
