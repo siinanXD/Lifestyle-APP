@@ -26,6 +26,16 @@ Jeder PR bekommt von Vercel eine Preview-URL (Kommentar des Vercel-Bots im PR), 
 - Ablauf: `/login` öffnen, mit dem Testkonto anmelden → Startseite → „Abmelden“. Nur Test- und Platzhalterdaten eintragen, keine echten Gesundheitsdaten (AGENTS.md Regel 6).
 - Neue Migrationen spielt `.github/workflows/migrate.yml` nach Merge ein (Einrichtung: `docs/INFRASTRUCTURE.md`).
 
+## Durchklicken (SIN-1444)
+Zwei Testkonten, damit du ohne eigenes Anlegen von Daten alles ansehen kannst. Nur Platzhalterdaten, keine echten Gesundheitsdaten.
+- URL: https://lifestyle-app-silk.vercel.app (Preview-URL je PR siehe Vercel-Kommentar).
+- Konto 1: `sinan-test@sjcode.de`, Passwort `TESTNUTZER_PASSWORT` in Infisical `/leitstand`. Bekommt Beispieldaten.
+- Konto 2: `sinan-test-2@sjcode.de`, Passwort `TESTNUTZER2_PASSWORT` in Infisical `/leitstand`. Bleibt leer und muss nichts von Konto 1 sehen.
+- Befüllen: `npm run testdaten:seed` (idempotent, ergänzt die Beispielzeilen). Zurücksetzen: `npm run testdaten:reset` (löscht alle eigenen Zeilen der bekannten Tabellen und füllt neu). Env-Namen: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `TESTNUTZER_PASSWORT`, `TESTNUTZER2_PASSWORT`, per Infisical einspielen (`infisical run -- npm run testdaten:seed`).
+- Das Skript meldet sich als Testkonto an (RLS), kann also keine anderen Konten anfassen, und lehnt andere E-Mail-Adressen ab. Meldet sich Konto 2 mit den Zugangsdaten nicht an (`invalid_credentials`), legt das Skript es an; verlangt das Projekt E-Mail-Bestätigung oder passt das Passwort nicht, meldet es das und endet mit Code 2 (ebenso, wenn ein Passwort in Infisical fehlt). Alle anderen Fehler brechen ab.
+- Aktuell gefüllt: Wasser (sieben Tage, 42 Zeilen), sichtbar als Wasserkarte auf der Startseite `/`. Plan, Trainings, Essen, Schlaf werden übersprungen und genannt, bis es Tabellen und Seiten dafür gibt (Eintrag in `lib/testdaten/seed.ts`).
+- Reihenfolge: 1. `testdaten:seed` 2. mit Konto 1 anmelden: Startseite zeigt „8 von 8 Gläsern, ohne Druck“ und sieben Tage Verlauf 3. abmelden, mit Konto 2 anmelden: Karte zeigt „0 von 8 Gläsern“ und „Noch keine Einträge“, nichts von Konto 1.
+
 ## Lokal starten und einloggen
 Voraussetzung: Node 22, Docker, Supabase CLI.
 1. `npm ci`
