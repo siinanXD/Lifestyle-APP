@@ -8,8 +8,8 @@ import { createClient } from "../lib/supabase/client";
 const MIN_PASSWORD_LENGTH = 6; // wie minimum_password_length in supabase/config.toml
 
 const COPY = {
-  login: { title: "Willkommen zurück", button: "Anmelden", other: "/registrieren", otherText: "Noch kein Konto? Registrieren" },
-  register: { title: "Schön, dass du da bist", button: "Registrieren", other: "/login", otherText: "Schon ein Konto? Anmelden" },
+  login: { title: "Anmelden", button: "Anmelden", other: "/registrieren", otherText: "Noch kein Konto? Registrieren" },
+  register: { title: "Konto anlegen", button: "Registrieren", other: "/login", otherText: "Schon ein Konto? Anmelden" },
 };
 
 const LINK_SENT = "Wenn es zu dieser Adresse ein Konto gibt, haben wir dir einen Link geschickt. Er gilt kurz, schau auch im Spam-Ordner nach.";
@@ -108,9 +108,10 @@ export function AuthForm({ mode, linkError }: { mode: "login" | "register"; link
   }
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "24rem", margin: "0 auto" }}>
+    <main className="page" data-narrow>
+      <p className="eyebrow">Lifestyle App</p>
       <h1>{copy.title}</h1>
-      <form method="post" onSubmit={onSubmit} noValidate style={{ display: "grid", gap: "1rem" }}>
+      <form method="post" onSubmit={onSubmit} noValidate className="stack">
         <Field name="email" label="E-Mail" type="email" autoComplete="email" error={errors.email} />
         <Field
           name="password"
@@ -119,34 +120,38 @@ export function AuthForm({ mode, linkError }: { mode: "login" | "register"; link
           autoComplete={mode === "login" ? "current-password" : "new-password"}
           error={errors.password}
         />
-        <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
+        <label className="toggle">
+          <input type="checkbox" role="switch" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
           Passwort anzeigen
         </label>
         {mode === "register" && (
-          <div style={{ display: "grid", gap: "0.25rem" }}>
-            <label style={{ display: "flex", gap: "0.5rem", alignItems: "start" }}>
+          <div className="field">
+            <label className="toggle">
               <input type="checkbox" name="consent" aria-describedby={errors.consent ? "consent-error" : undefined} />
               Ich habe die Datenschutzhinweise gelesen und stimme der Verarbeitung meiner Daten zu.
             </label>
             {errors.consent && (
-              <span id="consent-error" role="alert">
+              <span id="consent-error" role="alert" className="error">
                 {errors.consent}
               </span>
             )}
           </div>
         )}
-        {errors.form && <p role="alert">{errors.form}</p>}
+        {errors.form && (
+          <p role="alert" className="error">
+            {errors.form}
+          </p>
+        )}
         {info && <p role="status">{info}</p>}
-        <button type="submit" disabled={busy} style={{ padding: "0.75rem", fontSize: "1rem" }}>
+        <button type="submit" disabled={busy} className="btn">
           {copy.button}
         </button>
         {mode === "login" && (
           <>
-            <button type="button" disabled={busy} onClick={sendMagicLink} style={{ padding: "0.75rem", fontSize: "1rem" }}>
+            <button type="button" disabled={busy} onClick={sendMagicLink} className="btn" data-variant="neutral">
               Link per E-Mail schicken
             </button>
-            <button type="button" disabled={busy} onClick={signInWithGoogle} style={{ padding: "0.75rem", fontSize: "1rem" }}>
+            <button type="button" disabled={busy} onClick={signInWithGoogle} className="btn" data-variant="neutral">
               Mit Google anmelden
             </button>
           </>
@@ -154,11 +159,11 @@ export function AuthForm({ mode, linkError }: { mode: "login" | "register"; link
       </form>
       {mode === "login" && (
         <p>
-          <a href="/passwort-vergessen">Passwort vergessen?</a>
+          <a href="/passwort-vergessen" className="link">Passwort vergessen?</a>
         </p>
       )}
       <p>
-        <a href={copy.other}>{copy.otherText}</a>
+        <a href={copy.other} className="link">{copy.otherText}</a>
       </p>
     </main>
   );
@@ -167,7 +172,7 @@ export function AuthForm({ mode, linkError }: { mode: "login" | "register"; link
 export function Field(props: { name: string; label: string; type: string; autoComplete: string; error?: string }) {
   const { name, label, error, ...input } = props;
   return (
-    <div style={{ display: "grid", gap: "0.25rem" }}>
+    <div className="field">
       <label htmlFor={name}>{label}</label>
       <input
         id={name}
@@ -175,10 +180,10 @@ export function Field(props: { name: string; label: string; type: string; autoCo
         {...input}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${name}-error` : undefined}
-        style={{ padding: "0.75rem", fontSize: "1rem" }}
+        className="input"
       />
       {error && (
-        <span id={`${name}-error`} role="alert">
+        <span id={`${name}-error`} role="alert" className="error">
           {error}
         </span>
       )}

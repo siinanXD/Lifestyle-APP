@@ -40,3 +40,9 @@ test("Schriftgrößen-Tokens liegen bei mindestens 16 px", () => {
 test("Tab-Ziele sind mindestens 44 px hoch", () => {
   expect(css).toMatch(/--tap-min:\s*2\.75rem/);
 });
+
+test.each([".btn", ".input", ".link", ".toggle", ".tab"])("%s hat eine Tippfläche von mindestens 44 px", (selector) => {
+  const rule = css.match(new RegExp(`^\\${selector}\\s*\\{([^}]*)\\}`, "m"));
+  expect(rule, selector).not.toBeNull();
+  expect(rule![1]).toMatch(/min-height:\s*var\(--(tap-min|tabbar-height)\)/);
+});

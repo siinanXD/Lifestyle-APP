@@ -177,3 +177,58 @@ a {
   display: grid;
   gap: var(--space-4);
 }
+
+.page[data-narrow] {
+  max-width: 26rem;
+}
+
+/* Kleine Produktzeile über dem Seitentitel. */
+.eyebrow {
+  margin: 0 0 var(--space-1);
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.error {
+  color: var(--color-danger-text);
+}
+
+/* Links in Formularen und Seiten: 44 px Tippfläche, auch wenn sie nur eine Textzeile sind. */
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+}
+
+/* Schalter und Kästchen mit ihrem Text: das ganze Label ist die Tippfläche. */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-min);
+  cursor: pointer;
+}
+
+.toggle input {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+/* Gefahrenaktion: eigener Abschnitt mit Abstand zu den übrigen Knöpfen. */
+.danger-zone {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
