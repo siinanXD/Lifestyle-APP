@@ -16,5 +16,8 @@ values
   ('huefte-kreisen', 'Hüftkreisen', 'mobility', '{huefte}', '{}',
    'Aufrecht stehen, Hände an die Hüfte, große langsame Kreise in beide Richtungen ausführen.'),
   ('oberschenkel-dehnen', 'Oberschenkel dehnen', 'dehnen', '{beine}', '{}',
-   'Im Stand die Ferse zum Gesäß führen, Knie nebeneinander halten, Position ruhig halten und gleichmäßig atmen.')
+   'Im Stand die Ferse zum Gesäß führen, Knie nebeneinander halten, Position ruhig halten und gleichmäßig atmen.'),
+  -- SIN-1275: Übung für den ersten Trainingsweg („Rudern, 3 × 12“); SIN-1267 übernimmt den Slug in die Katalog-Migration.
+  ('rudern-kurzhantel', 'Rudern mit Kurzhantel', 'kraft', '{ruecken,bizeps}', '{kurzhanteln}',
+   'Eine Hand und ein Knie auf der Bank abstützen, Rücken gerade, Hantel zur Hüfte ziehen und kontrolliert wieder absenken.')
 on conflict (slug) do nothing;

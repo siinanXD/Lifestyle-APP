@@ -51,7 +51,7 @@ describe("App-Rahmen (SIN-1254)", () => {
   });
 });
 
-describe.each(["training", "essen", "fortschritt"])("Platzhalter /%s", (route) => {
+describe.each(["essen", "fortschritt"])("Platzhalter /%s", (route) => {
   test("zeigt Überschrift und „Bald hier“", async () => {
     const { default: Page } = await import(`../app/(app)/${route}/page.tsx`);
     render(<Page />);
