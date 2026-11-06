@@ -37,9 +37,10 @@ export function NewPasswordForm() {
   }
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "24rem", margin: "0 auto" }}>
+    <main className="page" data-narrow>
+      <p className="eyebrow">Lifestyle App</p>
       <h1>Neues Passwort</h1>
-      <form method="post" onSubmit={onSubmit} noValidate style={{ display: "grid", gap: "1rem" }}>
+      <form method="post" onSubmit={onSubmit} noValidate className="stack">
         <Field
           name="password"
           label="Neues Passwort"
@@ -47,12 +48,16 @@ export function NewPasswordForm() {
           autoComplete="new-password"
           error={error.password}
         />
-        <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
+        <label className="toggle">
+          <input type="checkbox" role="switch" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
           Passwort anzeigen
         </label>
-        {error.form && <p role="alert">{error.form}</p>}
-        <button type="submit" disabled={busy} style={{ padding: "0.75rem", fontSize: "1rem" }}>
+        {error.form && (
+          <p role="alert" className="error">
+            {error.form}
+          </p>
+        )}
+        <button type="submit" disabled={busy} className="btn">
           Passwort speichern
         </button>
       </form>
