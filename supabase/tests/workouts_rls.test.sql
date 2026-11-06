@@ -88,7 +88,9 @@ select is_empty(
 select lives_ok($$ select lifestyle.delete_own_data() $$, 'A löscht die eigenen Daten');
 reset role;
 select results_eq(
-  $$ select user_id from lifestyle.workouts union all select user_id from lifestyle.workout_sets $$,
+  $$ select user_id from lifestyle.workouts where user_id in ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000b')
+     union all
+     select user_id from lifestyle.workout_sets where user_id in ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000b') $$,
   $$ values ('00000000-0000-0000-0000-00000000000b'::uuid), ('00000000-0000-0000-0000-00000000000b'::uuid) $$,
   'delete_own_data entfernt Workouts und Sätze von A, B bleibt'
 );
