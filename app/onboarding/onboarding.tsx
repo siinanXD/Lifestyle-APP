@@ -63,11 +63,16 @@ export function Onboarding({ start }: { start: Start }) {
   function gehe(e: Einwilligungen, nach: "vor" | "zurueck") {
     const ziel = nach === "vor" ? naechster(schritt, e) : vorheriger(schritt, e);
     setFehler("");
-    if (ziel === "start") return beende("/");
+    if (ziel === "start") return void beende("/");
     setSchritt(ziel);
   }
 
-  function beende(ziel: string) {
+  // Abschluss und „Alles überspringen“ setzen nur den Zeitstempel; danach leitet die Startseite nicht mehr hierher.
+  async function beende(ziel: string) {
+    const ok = await mitBusy(
+      async () => !(await speichereProfil(createClient(), { onboarding_completed_at: new Date().toISOString() })).error,
+    );
+    if (!ok) return;
     router.push(ziel);
     router.refresh();
   }

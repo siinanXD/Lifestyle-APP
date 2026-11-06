@@ -217,10 +217,12 @@ test("Zusammenfassung zeigt nur Gespeichertes, Übersprungenes als „nicht ange
   expect(zeilen).toContain("Zeit: nicht angegeben");
   expect(zeilen).toContain("Rücksicht: nicht angegeben");
   fireEvent.click(screen.getByRole("button", { name: "Plan erstellen" }));
-  expect(push).toHaveBeenCalledWith("/training");
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/training"));
+  expect(speichere).toHaveBeenLastCalledWith(expect.anything(), { onboarding_completed_at: expect.any(String) });
 });
 
 test("Zusammenfassung: Ohne Plan starten führt zur Startseite, Ändern zurück zu den Zielen", async () => {
+  speichere.mockResolvedValue({ error: null });
   render(<Onboarding start={bereit} />);
   ueberspringe(6);
   await screen.findByRole("heading", { level: 1, name: FRAGEN.zusammenfassung });
@@ -228,14 +230,29 @@ test("Zusammenfassung: Ohne Plan starten führt zur Startseite, Ändern zurück 
   expect(frage(FRAGEN.ziele)).toBeTruthy();
   ueberspringe(6);
   fireEvent.click(screen.getByRole("button", { name: "Ohne Plan starten" }));
-  expect(push).toHaveBeenCalledWith("/");
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/"));
+  expect(speichere).toHaveBeenCalledWith(expect.anything(), { onboarding_completed_at: expect.any(String) });
 });
 
-test("Alles überspringen führt sofort zur Startseite, ohne zu speichern", () => {
+test("Alles überspringen setzt nur den Abschluss-Zeitstempel und führt zur Startseite", async () => {
+  speichere.mockResolvedValue({ error: null });
+  render(<Onboarding start={bereit} />);
+  fireEvent.click(screen.getByRole("button", { name: "Mehr Ausdauer" }));
+  fireEvent.click(screen.getByRole("button", { name: "Alles überspringen" }));
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/"));
+  expect(speichere).toHaveBeenCalledTimes(1);
+  expect(speichere).toHaveBeenCalledWith(expect.anything(), { onboarding_completed_at: expect.any(String) });
+  expect(erteile).not.toHaveBeenCalled();
+  expect(gesundheit).not.toHaveBeenCalled();
+  expect(koerper).not.toHaveBeenCalled();
+});
+
+test("Abschluss scheitert: man bleibt und bekommt eine ruhige Meldung", async () => {
+  speichere.mockResolvedValue({ error: { code: "42501" } });
   render(<Onboarding start={bereit} />);
   fireEvent.click(screen.getByRole("button", { name: "Alles überspringen" }));
-  expect(push).toHaveBeenCalledWith("/");
-  expect(speichere).not.toHaveBeenCalled();
+  expect(await screen.findByRole("alert")).toBeTruthy();
+  expect(push).not.toHaveBeenCalled();
 });
 
 test("Fehler beim Speichern: man bleibt im Schritt und bekommt eine ruhige Meldung", async () => {
