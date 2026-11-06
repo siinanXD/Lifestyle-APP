@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createClient } from "../../lib/supabase/client";
+import { createClient } from "../../../lib/supabase/client";
 
 export function DeleteAccount() {
   const router = useRouter();
@@ -26,19 +26,23 @@ export function DeleteAccount() {
 
   if (!confirming) {
     return (
-      <button type="button" onClick={() => setConfirming(true)} style={{ padding: "0.75rem", fontSize: "1rem" }}>
+      <button type="button" onClick={() => setConfirming(true)} className="btn" data-variant="danger">
         Konto löschen
       </button>
     );
   }
   return (
-    <div style={{ display: "grid", gap: "0.75rem" }}>
+    <div className="stack">
       <p>Damit löschst du alle deine Daten in der Lifestyle App. Das lässt sich nicht rückgängig machen.</p>
-      {error && <p role="alert">{error}</p>}
-      <button type="button" disabled={busy} onClick={remove} style={{ padding: "0.75rem", fontSize: "1rem" }}>
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      <button type="button" disabled={busy} onClick={remove} className="btn" data-variant="danger">
         Ja, alle meine Daten löschen
       </button>
-      <button type="button" disabled={busy} onClick={() => setConfirming(false)} style={{ padding: "0.75rem", fontSize: "1rem" }}>
+      <button type="button" disabled={busy} onClick={() => setConfirming(false)} className="btn" data-variant="neutral">
         Abbrechen
       </button>
     </div>

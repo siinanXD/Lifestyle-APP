@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { RegisterServiceWorker } from "./register-sw";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Lifestyle App",
@@ -14,7 +15,7 @@ export const viewport: Viewport = { themeColor: "#0f766e" };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="de">
-      <body style={{ margin: 0, fontFamily: "system-ui, sans-serif" }}>
+      <body>
         {children}
         <RegisterServiceWorker />
       </body>
