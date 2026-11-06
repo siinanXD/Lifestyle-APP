@@ -4,3 +4,16 @@ next-env.d.ts
 *.tsbuildinfo
 supabase/.temp/
 supabase/.branches/
+
+# Secrets (SECURITY_RULES.md, SIN-1610): Git liest C:\Dev\.gitignore nicht, deshalb hier.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*
+secrets*
+service-account*.json
+id_rsa*
