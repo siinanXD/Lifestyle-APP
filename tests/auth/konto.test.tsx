@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
-import { DeleteAccount } from "../../app/konto/delete-account";
+import { DeleteAccount } from "../../app/(app)/konto/delete-account";
 
 const rpc = vi.hoisted(() => vi.fn());
 const signOut = vi.hoisted(() => vi.fn());

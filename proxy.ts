@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_SCHEMA, supabaseEnv } from "./lib/supabase/env";
 
-const PUBLIC_PATHS = ["/login", "/registrieren", "/passwort-vergessen", "/auth/callback"];
+const PUBLIC_PATHS = ["/willkommen", "/login", "/registrieren", "/passwort-vergessen", "/auth/callback"];
 
 export async function proxy(request: NextRequest) {
   const { url, anonKey } = supabaseEnv();
@@ -22,7 +22,8 @@ export async function proxy(request: NextRequest) {
   // getUser prüft das Token beim Auth-Server; getSession würde dem Cookie blind glauben.
   const { data } = await supabase.auth.getUser();
   if (!data.user && !PUBLIC_PATHS.includes(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // Neue Personen landen auf der Einstiegsseite, alle anderen geschützten Pfade führen zur Anmeldung.
+    return NextResponse.redirect(new URL(request.nextUrl.pathname === "/" ? "/willkommen" : "/login", request.url));
   }
   return response;
 }
