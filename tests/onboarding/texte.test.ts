@@ -26,3 +26,7 @@ test("Auswahlwerte passen zu den Checks in der Datenbank", () => {
 test("Hinweis gegen Diagnosen im Freitext", () => {
   expect(texte.HINWEIS_FREITEXT).toBe("Bitte keine Diagnosen oder Medikamente eintragen.");
 });
+
+test("Geräte-Schlüssel wie in SIN-1264 festgelegt", () => {
+  expect(Object.keys(texte.GERAETE)).toEqual(["keine", "kurzhanteln", "langhantel", "kabelzug", "baender", "kardio", "studio"]);
+});

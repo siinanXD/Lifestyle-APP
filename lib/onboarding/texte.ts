@@ -37,14 +37,15 @@ export const EINSCHRAENKUNGEN = {
   sonstiges: "Sonstiges",
 } as const;
 
+// Schlüssel wie profiles.equipment laut SIN-1264.
 export const GERAETE = {
-  nichts: "Nichts, nur ich",
+  keine: "Nichts, nur ich",
   kurzhanteln: "Kurzhanteln",
   langhantel: "Langhantel",
   kabelzug: "Kabelzug",
   baender: "Bänder",
-  kardiogeraet: "Kardiogerät",
-  fitnessstudio: "Fitnessstudio",
+  kardio: "Kardiogerät",
+  studio: "Fitnessstudio",
 } as const;
 
 export const HINWEIS_FREITEXT = "Bitte keine Diagnosen oder Medikamente eintragen.";
