@@ -232,3 +232,95 @@ a {
   padding-top: var(--space-5);
   border-top: 1px solid var(--color-border);
 }
+
+/* Onboarding (SIN-1263) */
+.muted {
+  color: var(--color-muted);
+}
+
+/* „Weiter“ und „Überspringen“ gleich groß (ONBOARDING.md Grundregel 2). */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.actions-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.link-button {
+  min-height: var(--tap-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  min-height: var(--tap-min);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Gewählt: Farbe und Rahmen, nicht Farbe allein. */
+.chip[aria-pressed="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 600;
+}
+
+.chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.choices {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choices legend {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+/* Fortschritt als Punkte, kein Prozentbalken (ONBOARDING.md Grundregel 3). */
+.dots {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dots li {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 50%;
+}
+
+.dots li[data-aktiv] {
+  background: var(--color-primary);
+}
