@@ -5,33 +5,34 @@ import { beendeWorkout, saetzeDesWorkouts, speichereSatz, starteWorkout } from "
 // Lokaler Stack: `supabase start` + `supabase db reset`, dann SUPABASE_URL und SUPABASE_ANON_KEY aus `supabase status -o env` setzen.
 const { SUPABASE_URL: url, SUPABASE_ANON_KEY: anonKey } = process.env;
 
+const neuerClient = () => createClient(url!, anonKey!, { db: { schema: "lifestyle" }, auth: { persistSession: false } });
+// log.ts ist auf den Typ des Browser-Clients geschrieben; die Abfrage-API ist dieselbe.
+const alsLogClient = (c: unknown) => c as never;
+
 async function konto(name: string) {
-  const client = createClient(url!, anonKey!, { db: { schema: "lifestyle" }, auth: { persistSession: false } });
+  const client = neuerClient();
   const { error } = await client.auth.signUp({ email: `${name}-${Date.now()}@example.test`, password: "platzhalter-123" });
   if (error) throw error;
-  return client as never;
+  return client;
 }
 
 describe.skipIf(!url || !anonKey)("Trainingsweg „Rudern, 3 × 12“ gegen lokalen Stack (SIN-1275)", () => {
   test("A speichert und sieht es nach dem Neuladen wieder; B liest es auch direkt nicht", async () => {
     const a = await konto("rudern-a");
-    const { data: rudern } = await (a as ReturnType<typeof createClient>).from("exercises").select("id").eq("slug", "rudern-kurzhantel").single();
-    const workout = await starteWorkout(a, { id: crypto.randomUUID() });
-    expect(workout.ok).toBe(true);
-    const workoutId = (workout as { daten: { id: string } }).daten.id;
-    for (const satzNr of [1, 2, 3]) {
-      expect(await speichereSatz(a, { workoutId, exerciseId: rudern!.id, satzNr, wdh: 12, gewichtKg: 20, technik: "sauber", schmerz: false })).toEqual({
-        ok: true,
-        daten: null,
-      });
-    }
-    expect((await beendeWorkout(a, workoutId, {})).ok).toBe(true);
+    const { data: rudern, error } = await a.from("exercises").select("id").eq("slug", "rudern-kurzhantel").single<{ id: string }>();
+    expect(error).toBeNull();
+    const workout = await starteWorkout(alsLogClient(a), { id: crypto.randomUUID() });
+    if (!workout.ok) throw new Error(workout.fehler);
+    const workoutId = workout.daten.id;
+    const satz = { workoutId, exerciseId: rudern!.id, wdh: 12, gewichtKg: 20, technik: "sauber" as const, schmerz: false };
+    for (const satzNr of [1, 2, 3]) expect(await speichereSatz(alsLogClient(a), { ...satz, satzNr })).toEqual({ ok: true, daten: null });
+    expect((await beendeWorkout(alsLogClient(a), workoutId, {})).ok).toBe(true);
 
-    // „Neu laden“: frischer Client, neue Anmeldung als A
-    const { data: sitzung } = await (a as ReturnType<typeof createClient>).auth.getSession();
-    const a2 = createClient(url!, anonKey!, { db: { schema: "lifestyle" }, auth: { persistSession: false } });
+    // „Neu laden“: frischer Client mit der Sitzung von A
+    const { data: sitzung } = await a.auth.getSession();
+    const a2 = neuerClient();
     await a2.auth.setSession({ access_token: sitzung.session!.access_token, refresh_token: sitzung.session!.refresh_token });
-    const wieder = await saetzeDesWorkouts(a2 as never, workoutId);
+    const wieder = await saetzeDesWorkouts(alsLogClient(a2), workoutId);
     expect(wieder.ok && wieder.daten.map((s) => [s.exercises?.name, s.set_no, s.reps])).toEqual([
       ["Rudern mit Kurzhantel", 1, 12],
       ["Rudern mit Kurzhantel", 2, 12],
@@ -39,12 +40,9 @@ describe.skipIf(!url || !anonKey)("Trainingsweg „Rudern, 3 × 12“ gegen loka
     ]);
 
     const b = await konto("rudern-b");
-    expect(await saetzeDesWorkouts(b, workoutId)).toEqual({ ok: true, daten: [] });
-    const direkt = await (b as ReturnType<typeof createClient>).from("workout_sets").select("*").eq("workout_id", workoutId);
-    expect(direkt.data).toEqual([]);
-    const workouts = await (b as ReturnType<typeof createClient>).from("workouts").select("*").eq("id", workoutId);
-    expect(workouts.data).toEqual([]);
-    const fremd = await speichereSatz(b, { workoutId, exerciseId: rudern!.id, satzNr: 4, wdh: 1, gewichtKg: 1, technik: "sauber", schmerz: false });
-    expect(fremd.ok).toBe(false);
+    expect(await saetzeDesWorkouts(alsLogClient(b), workoutId)).toEqual({ ok: true, daten: [] });
+    expect((await b.from("workout_sets").select("*").eq("workout_id", workoutId)).data).toEqual([]);
+    expect((await b.from("workouts").select("*").eq("id", workoutId)).data).toEqual([]);
+    expect((await speichereSatz(alsLogClient(b), { ...satz, satzNr: 4 })).ok).toBe(false);
   });
 });
