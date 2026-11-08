@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "../../../../../lib/supabase/client";
 import { beendeWorkout, letzteSaetze, loescheSatz, speichereSatz } from "../../../../../lib/training/log";
 
@@ -38,12 +38,19 @@ export function Protokoll({ workoutId, uebungen, saetze: start }: { workoutId: s
   const [fehler, setFehler] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Vorbelegung mit dem letzten Gewicht dieser Übung; ohne frühere Sätze bleibt das Feld leer.
+  // Vorbelegung mit dem letzten Gewicht dieser Übung. Der Übungswechsel leert das Feld, damit kein Gewicht der vorigen
+  // Übung stehen bleibt; ohne frühere Sätze oder nach Körpergewicht bleibt es leer. Eigene Eingaben werden nie überschrieben.
+  const angefasst = useRef(false);
+  function waehle(id: string) {
+    angefasst.current = false;
+    setGewicht("");
+    setUebung(id);
+  }
   useEffect(() => {
     if (!uebung) return;
     let aktuell = true;
     letzteSaetze(createClient(), uebung, 1).then((r) => {
-      if (aktuell && r.ok && r.daten[0]?.weight_kg != null) setGewicht(String(Number(r.daten[0].weight_kg)));
+      if (aktuell && !angefasst.current && r.ok && r.daten[0]?.weight_kg != null) setGewicht(String(Number(r.daten[0].weight_kg)));
     });
     return () => {
       aktuell = false;
@@ -102,7 +109,7 @@ export function Protokoll({ workoutId, uebungen, saetze: start }: { workoutId: s
       <h1>Training</h1>
       <div className="field">
         <label htmlFor="uebung">Übung</label>
-        <select id="uebung" className="input" value={uebung} onChange={(e) => setUebung(e.target.value)}>
+        <select id="uebung" className="input" value={uebung} onChange={(e) => waehle(e.target.value)}>
           {uebungen.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
@@ -118,7 +125,7 @@ export function Protokoll({ workoutId, uebungen, saetze: start }: { workoutId: s
       <div className="field">
         <label htmlFor="gewicht">Gewicht (kg)</label>
         <input id="gewicht" className="input" type="number" inputMode="decimal" min={0} max={MAX_KG} step={0.25} autoComplete="off"
-          aria-describedby="gewicht-hinweis" value={gewicht} onChange={(e) => setGewicht(e.target.value)} />
+          aria-describedby="gewicht-hinweis" value={gewicht} onChange={(e) => { angefasst.current = true; setGewicht(e.target.value); }} />
         <p id="gewicht-hinweis" className="muted">Leer lassen für Körpergewicht.</p>
       </div>
       <Schalter name="Technik wackelig" an={wackelig} setze={setWackelig} />

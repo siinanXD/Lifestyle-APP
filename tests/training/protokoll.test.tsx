@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { Protokoll } from "../../app/(app)/training/protokoll/[workoutId]/protokoll";
+import ProtokollPage from "../../app/(app)/training/protokoll/[workoutId]/page";
 import TrainingPage from "../../app/(app)/training/page";
 
 const log = vi.hoisted(() => ({
@@ -10,14 +11,16 @@ const log = vi.hoisted(() => ({
   letzteSaetze: vi.fn(),
   starteWorkout: vi.fn(),
   letzteWorkouts: vi.fn(),
+  saetzeDesWorkouts: vi.fn(),
 }));
+const serverClient = vi.hoisted(() => vi.fn(async () => ({})));
 const requireConsent = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/training/log", () => log);
 vi.mock("../../lib/consent/require-consent", () => ({ requireConsent }));
 vi.mock("../../lib/supabase/client", () => ({ createClient: () => ({}) }));
-vi.mock("../../lib/supabase/server", () => ({ createClient: async () => ({}) }));
+vi.mock("../../lib/supabase/server", () => ({ createClient: serverClient }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 
 afterEach(() => {
@@ -39,6 +42,15 @@ test("Training: ohne Einwilligung B wird umgeleitet und nichts geladen oder gesp
   expect(requireConsent).toHaveBeenCalledWith("B", "/training");
   expect(log.letzteWorkouts).not.toHaveBeenCalled();
   expect(log.starteWorkout).not.toHaveBeenCalled();
+});
+
+test("Protokoll: ohne Einwilligung B wird umgeleitet, nichts gelesen oder gespeichert", async () => {
+  requireConsent.mockRejectedValue(new Error("NEXT_REDIRECT"));
+  await expect(ProtokollPage({ params: Promise.resolve({ workoutId: "w1" }) })).rejects.toThrow("NEXT_REDIRECT");
+  expect(requireConsent).toHaveBeenCalledWith("B", "/training/protokoll/w1");
+  expect(serverClient).not.toHaveBeenCalled();
+  expect(log.saetzeDesWorkouts).not.toHaveBeenCalled();
+  expect(log.speichereSatz).not.toHaveBeenCalled();
 });
 
 test("Training: mit B zeigt Start-Knopf und die letzten Trainings", async () => {
@@ -143,4 +155,32 @@ test("Beenden mit Regeneration gut setzt sie; Überspringen schreibt keine", asy
   fireEvent.click(screen.getByRole("button", { name: "Training beenden" }));
   fireEvent.click(screen.getByRole("button", { name: "Überspringen" }));
   await vi.waitFor(() => expect(log.beendeWorkout).toHaveBeenLastCalledWith(expect.anything(), "w1", {}));
+});
+
+test("Übungswechsel ohne frühere Sätze leert das Gewicht: Satz wird als Körpergewicht gespeichert", async () => {
+  log.letzteSaetze.mockImplementation(async (_c: unknown, uebung: string) =>
+    uebung === "ex-rudern" ? { ok: true, daten: [{ weight_kg: 20 }] } : { ok: true, daten: [] },
+  );
+  log.speichereSatz.mockResolvedValue({ ok: true, daten: null });
+  zeige();
+  const gewicht = screen.getByLabelText("Gewicht (kg)") as HTMLInputElement;
+  await vi.waitFor(() => expect(gewicht.value).toBe("20"));
+  fireEvent.change(screen.getByLabelText("Übung"), { target: { value: "ex-liegestuetz" } });
+  await vi.waitFor(() => expect(log.letzteSaetze).toHaveBeenLastCalledWith(expect.anything(), "ex-liegestuetz", 1));
+  await vi.waitFor(() => expect(gewicht.value).toBe(""));
+  tippe("Wiederholungen", "10");
+  speichern();
+  expect(await screen.findByText("Satz 1: 10 Wdh · Körpergewicht")).toBeTruthy();
+  expect(log.speichereSatz).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ exerciseId: "ex-liegestuetz", gewichtKg: null }));
+});
+
+test("letzter Satz der Übung mit Körpergewicht: Gewicht bleibt leer", async () => {
+  log.letzteSaetze.mockImplementation(async (_c: unknown, uebung: string) =>
+    uebung === "ex-rudern" ? { ok: true, daten: [{ weight_kg: 20 }] } : { ok: true, daten: [{ weight_kg: null }] },
+  );
+  zeige();
+  const gewicht = screen.getByLabelText("Gewicht (kg)") as HTMLInputElement;
+  await vi.waitFor(() => expect(gewicht.value).toBe("20"));
+  fireEvent.change(screen.getByLabelText("Übung"), { target: { value: "ex-liegestuetz" } });
+  await vi.waitFor(() => expect(gewicht.value).toBe(""));
 });
