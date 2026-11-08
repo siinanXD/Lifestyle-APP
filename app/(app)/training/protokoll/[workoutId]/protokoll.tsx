@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "../../../../../lib/supabase/client";
-import { beendeWorkout, letzteSaetze, loescheSatz, speichereSatz } from "../../../../../lib/training/log";
+import { beendeWorkout, letzteSaetze, loescheSatz, saetzeDesWorkouts, speichereSatz } from "../../../../../lib/training/log";
 
 type Uebung = { id: string; name: string };
 type Zeile = {
@@ -66,18 +66,27 @@ export function Protokoll({ workoutId, uebungen, saetze: start }: { workoutId: s
     if (last !== null && (!Number.isFinite(last) || last < 0 || last > MAX_KG)) {
       return setFehler(`Bitte gib das Gewicht von 0 bis ${MAX_KG} kg ein oder lass es für Körpergewicht leer.`);
     }
-    const satzNr = Math.max(0, ...saetze.filter((s) => s.exercise_id === uebung).map((s) => s.set_no)) + 1;
+    const naechste = (liste: Zeile[]) => Math.max(0, ...liste.filter((s) => s.exercise_id === uebung).map((s) => s.set_no)) + 1;
+    const client = createClient();
+    const sende = (nr: number) =>
+      speichereSatz(
+        client,
+        { workoutId, exerciseId: uebung, satzNr: nr, wdh: anzahl, gewichtKg: last, technik: wackelig ? "wackelig" : "sauber", schmerz },
+        { nurNeu: true },
+      );
+    let satzNr = naechste(saetze);
     setFehler("");
     setBusy(true);
-    const r = await speichereSatz(createClient(), {
-      workoutId,
-      exerciseId: uebung,
-      satzNr,
-      wdh: anzahl,
-      gewichtKg: last,
-      technik: wackelig ? "wackelig" : "sauber",
-      schmerz,
-    });
+    let r = await sende(satzNr);
+    // Nummer schon vergeben (z. B. Satz aus einem zweiten Fenster): Liste neu laden und einmal mit der nächsten Nummer versuchen.
+    if (!r.ok && r.fehler === "23505") {
+      const neu = await saetzeDesWorkouts(client, workoutId);
+      if (neu.ok) {
+        setSaetze(neu.daten);
+        satzNr = naechste(neu.daten);
+        r = await sende(satzNr);
+      }
+    }
     setBusy(false);
     if (!r.ok) return setFehler(FEHLER);
     const name = uebungen.find((u) => u.id === uebung)?.name ?? "";

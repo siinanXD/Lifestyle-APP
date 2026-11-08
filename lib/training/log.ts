@@ -70,28 +70,26 @@ export function beendeWorkout(
   return fuehreAus<null>(client.from("workouts").update(werte).eq("id", id));
 }
 
-export async function speichereSatz(client: Client, satz: Satz): Promise<Ergebnis<null>> {
+export async function speichereSatz(client: Client, satz: Satz, { nurNeu = false }: { nurNeu?: boolean } = {}): Promise<Ergebnis<null>> {
   if (!(satz.wdh >= 0) || (satz.gewichtKg !== null && !(satz.gewichtKg >= 0)) || !(satz.satzNr >= 1)) {
     return { ok: false, fehler: "ungueltig" };
   }
   const userId = await nutzerId(client);
   if (!userId) return { ok: false, fehler: "no_user" };
+  const zeile = {
+    workout_id: satz.workoutId,
+    user_id: userId,
+    exercise_id: satz.exerciseId,
+    set_no: satz.satzNr,
+    reps: satz.wdh,
+    weight_kg: satz.gewichtKg,
+    technique: satz.technik,
+    pain: satz.schmerz,
+  };
+  // nurNeu: ein neuer Satz darf keinen vorhandenen überschreiben (z. B. aus einem zweiten Fenster); Konflikt → fehler "23505".
+  if (nurNeu) return fuehreAus(client.from("workout_sets").insert(zeile));
   // Gleicher Schlüssel überschreibt: zweimal derselbe Satz bleibt ein Satz (Doppelklick, spätere Offline-Wiederholung).
-  return fuehreAus(
-    client.from("workout_sets").upsert(
-      {
-        workout_id: satz.workoutId,
-        user_id: userId,
-        exercise_id: satz.exerciseId,
-        set_no: satz.satzNr,
-        reps: satz.wdh,
-        weight_kg: satz.gewichtKg,
-        technique: satz.technik,
-        pain: satz.schmerz,
-      },
-      { onConflict: "workout_id,set_no,exercise_id" },
-    ),
-  );
+  return fuehreAus(client.from("workout_sets").upsert(zeile, { onConflict: "workout_id,set_no,exercise_id" }));
 }
 
 export function loescheSatz(client: Client, { workoutId, exerciseId, satzNr }: Pick<Satz, "workoutId" | "exerciseId" | "satzNr">) {

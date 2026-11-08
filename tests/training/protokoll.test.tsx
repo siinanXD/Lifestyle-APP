@@ -78,10 +78,10 @@ test("Satz speichern ruft speichereSatz mit den Werten und zeigt ihn in der List
     gewichtKg: 20,
     technik: "sauber",
     schmerz: false,
-  });
+  }, { nurNeu: true });
   speichern();
   expect(await screen.findByText("Satz 2: 12 Wdh · 20 kg")).toBeTruthy();
-  expect(log.speichereSatz).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ satzNr: 2 }));
+  expect(log.speichereSatz).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ satzNr: 2 }), { nurNeu: true });
 });
 
 test("leeres Gewicht wird als Körpergewicht gespeichert; Schalter für Technik und Schmerz", async () => {
@@ -96,6 +96,7 @@ test("leeres Gewicht wird als Körpergewicht gespeichert; Schalter für Technik 
   expect(log.speichereSatz).toHaveBeenCalledWith(
     expect.anything(),
     expect.objectContaining({ gewichtKg: null, technik: "wackelig", schmerz: true }),
+    { nurNeu: true },
   );
 });
 
@@ -171,7 +172,7 @@ test("Übungswechsel ohne frühere Sätze leert das Gewicht: Satz wird als Körp
   tippe("Wiederholungen", "10");
   speichern();
   expect(await screen.findByText("Satz 1: 10 Wdh · Körpergewicht")).toBeTruthy();
-  expect(log.speichereSatz).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ exerciseId: "ex-liegestuetz", gewichtKg: null }));
+  expect(log.speichereSatz).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ exerciseId: "ex-liegestuetz", gewichtKg: null }), { nurNeu: true });
 });
 
 test("letzter Satz der Übung mit Körpergewicht: Gewicht bleibt leer", async () => {
@@ -183,4 +184,21 @@ test("letzter Satz der Übung mit Körpergewicht: Gewicht bleibt leer", async ()
   await vi.waitFor(() => expect(gewicht.value).toBe("20"));
   fireEvent.change(screen.getByLabelText("Übung"), { target: { value: "ex-liegestuetz" } });
   await vi.waitFor(() => expect(gewicht.value).toBe(""));
+});
+
+test("Satz aus einem anderen Fenster wird nicht überschrieben: neu laden, nächste Nummer nehmen", async () => {
+  log.letzteSaetze.mockResolvedValue({ ok: true, daten: [] });
+  log.speichereSatz.mockResolvedValueOnce({ ok: false, fehler: "23505" }).mockResolvedValueOnce({ ok: true, daten: null });
+  log.saetzeDesWorkouts.mockResolvedValue({
+    ok: true,
+    daten: [{ exercise_id: "ex-rudern", exercises: { name: "Rudern mit Kurzhantel" }, set_no: 1, reps: 12, weight_kg: 20, technique: "sauber", pain: false }],
+  });
+  zeige();
+  tippe("Wiederholungen", "8");
+  speichern();
+  expect(await screen.findByText("Satz 2: 8 Wdh · Körpergewicht")).toBeTruthy();
+  expect(screen.getByText("Satz 1: 12 Wdh · 20 kg")).toBeTruthy();
+  expect(log.speichereSatz).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({ satzNr: 1, wdh: 8 }), { nurNeu: true });
+  expect(log.speichereSatz).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({ satzNr: 2, wdh: 8 }), { nurNeu: true });
+  expect(log.saetzeDesWorkouts).toHaveBeenCalledWith(expect.anything(), "w1");
 });

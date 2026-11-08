@@ -54,6 +54,15 @@ describe("speichereSatz", () => {
     ]);
   });
 
+  test("neuer Satz (nurNeu) fügt ein statt zu überschreiben; Konflikt kommt als 23505 zurück", async () => {
+    const { client, aufrufe } = fake({ data: null, error: { code: "23505" } });
+    expect(await speichereSatz(client, satz, { nurNeu: true })).toEqual({ ok: false, fehler: "23505" });
+    expect(aufrufe.some(([m]) => m === "upsert")).toBe(false);
+    expect(aufrufe.find(([m]) => m === "insert")![1]).toEqual([
+      { workout_id: "w1", user_id: "u1", exercise_id: "rudern", set_no: 1, reps: 12, weight_kg: 20, technique: "sauber", pain: false },
+    ]);
+  });
+
   test("leeres Gewicht wird als Körpergewicht (null) gespeichert", async () => {
     const { client, aufrufe } = fake();
     await speichereSatz(client, { ...satz, gewichtKg: null });
