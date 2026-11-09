@@ -142,6 +142,49 @@ describe("zuSpeichern", () => {
   test("Körperwerte und Einschränkungen nur, wenn Schritt 6 sie einschaltet bzw. angegeben sind", () => {
     expect(zuSpeichern({ ziele: ["kraeftiger"] }, alle)).toEqual({ profil: { goals: ["kraeftiger"] } });
   });
+
+  const bisher: Antworten = {
+    ziele: ["kraeftiger"],
+    zielNotiz: "Platzhalter",
+    geraete: ["kurzhanteln"],
+    einschraenkungen: ["knie"],
+    einschraenkungNotiz: "Platzhalter",
+  };
+
+  test("geleerte Auswahl löscht den gespeicherten Wert", () => {
+    expect(zuSpeichern({ ziele: [], geraete: [], einschraenkungen: [] }, alle, bisher)).toEqual({
+      profil: { goals: [], equipment: [] },
+      gesundheit: { restrictions: [] },
+    });
+  });
+
+  test("geleerte Notiz löscht die gespeicherte (null), auch wenn nur Leerzeichen bleiben", () => {
+    expect(zuSpeichern({ zielNotiz: "", einschraenkungNotiz: "   " }, alle, bisher)).toEqual({
+      profil: { goal_note: null },
+      gesundheit: { restriction_note: null },
+    });
+  });
+
+  test("leere Antwort ohne gespeicherten Wert schreibt nichts (Datenminimierung)", () => {
+    const leereAntworten: Antworten = { ziele: [], zielNotiz: "", geraete: [], einschraenkungen: [], einschraenkungNotiz: "   " };
+    expect(zuSpeichern(leereAntworten, alle)).toEqual({});
+    expect(zuSpeichern(leereAntworten, alle, {})).toEqual({});
+    expect(zuSpeichern(leereAntworten, alle, { ziele: [], zielNotiz: "", einschraenkungen: [], einschraenkungNotiz: "   " })).toEqual({});
+  });
+
+  test("leere Auswahl ohne gespeicherten Wert fällt weg, die getippte Notiz daneben bleibt", () => {
+    expect(zuSpeichern({ einschraenkungen: [], einschraenkungNotiz: "beim Laufen" }, alle)).toEqual({
+      gesundheit: { restriction_note: "beim Laufen" },
+    });
+  });
+
+  test("übersprungene Felder (undefined) fehlen und löschen auch Gespeichertes nicht", () => {
+    expect(zuSpeichern({ ziele: undefined, zielNotiz: undefined, einschraenkungen: undefined, einschraenkungNotiz: undefined }, alle, bisher)).toEqual({});
+  });
+
+  test("ohne B wird auch nichts an Gesundheitsangaben geleert", () => {
+    expect(zuSpeichern({ einschraenkungen: [], einschraenkungNotiz: "" }, nurA, bisher)).toEqual({});
+  });
 });
 
 describe("zusammenfassung", () => {

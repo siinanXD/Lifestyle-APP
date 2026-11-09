@@ -35,13 +35,13 @@ export type Antworten = {
 export type ZuSpeichern = {
   profil?: Partial<{
     goals: string[];
-    goal_note: string;
+    goal_note: string | null;
     days_per_week: number;
     minutes_per_session: number;
     experience: string;
     equipment: string[];
   }>;
-  gesundheit?: Partial<{ restrictions: string[]; restriction_note: string; height_cm: number }>;
+  gesundheit?: Partial<{ restrictions: string[]; restriction_note: string | null; height_cm: number }>;
   koerperwerte?: { weight_kg: number };
   coach?: boolean;
 };
@@ -94,20 +94,30 @@ export function allesUeberspringen(): Ziel {
   return "start";
 }
 
-const leer = (wert: unknown) => wert === undefined || wert === "" || (Array.isArray(wert) && wert.length === 0);
+const leer = (wert: unknown) =>
+  wert === undefined || (typeof wert === "string" && wert.trim() === "") || (Array.isArray(wert) && wert.length === 0);
 
-function ohneLeere<T extends Record<string, unknown>>(obj: T): Partial<T> | undefined {
-  const gefiltert = Object.fromEntries(Object.entries(obj).filter(([, v]) => !leer(v))) as Partial<T>;
+const notiz = (text: string | undefined) => (text === undefined ? undefined : text.trim() || null);
+
+// Leer löscht nur, was wirklich gespeichert ist; sonst entstünden eine leere Zeile und Einwilligung B ohne Inhalt.
+function ohneLeereNeue(a: Antworten, gespeichert: Antworten): Antworten {
+  return Object.fromEntries(Object.entries(a).filter(([f, v]) => !leer(v) || !leer(gespeichert[f as keyof Antworten])));
+}
+
+// undefined heißt unbeantwortet und fehlt in den Daten; eine geleerte Auswahl oder Notiz ist eine Änderung und wird gespeichert.
+function ohneFehlende<T extends Record<string, unknown>>(obj: T): Partial<T> | undefined {
+  const gefiltert = Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
   return Object.keys(gefiltert).length > 0 ? gefiltert : undefined;
 }
 
 /** Datenminimierung: was gespeichert werden darf. Ohne A nichts, ohne B keine Gesundheitsangaben, ohne E kein Coach. */
-export function zuSpeichern(a: Antworten, e: Einwilligungen): ZuSpeichern {
+export function zuSpeichern(antworten: Antworten, e: Einwilligungen, gespeichert: Antworten = {}): ZuSpeichern {
   if (e.A !== true) return {};
+  const a = ohneLeereNeue(antworten, gespeichert);
   const daten: ZuSpeichern = {};
-  const profil = ohneLeere({
+  const profil = ohneFehlende({
     goals: a.ziele,
-    goal_note: a.zielNotiz?.trim(),
+    goal_note: notiz(a.zielNotiz),
     days_per_week: a.tageProWoche,
     minutes_per_session: a.minutenProEinheit,
     experience: a.erfahrung,
@@ -115,9 +125,9 @@ export function zuSpeichern(a: Antworten, e: Einwilligungen): ZuSpeichern {
   });
   if (profil) daten.profil = profil;
   if (e.B === true) {
-    const gesundheit = ohneLeere({
+    const gesundheit = ohneFehlende({
       restrictions: a.einschraenkungen,
-      restriction_note: a.einschraenkungNotiz?.trim(),
+      restriction_note: notiz(a.einschraenkungNotiz),
       height_cm: a.groesseCm,
     });
     if (gesundheit) daten.gesundheit = gesundheit;

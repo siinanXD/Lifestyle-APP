@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { Onboarding } from "../../app/onboarding/onboarding";
 import { EINWILLIGUNGSTEXTE } from "../../lib/consent/texte";
@@ -161,6 +161,113 @@ test("Schritt 4 mit Einwilligung B: Auswahl wird gespeichert; „Nein“ schlie�
   await screen.findByRole("heading", { level: 1, name: FRAGEN.geraete });
   expect(erteile).toHaveBeenCalledWith(expect.anything(), "B");
   expect(gesundheit).toHaveBeenCalledWith(expect.anything(), { restrictions: ["ruecken"] });
+});
+
+test("gespeicherte Einschränkung: „Nein“ leert sie in der Datenbank, die Zusammenfassung stimmt", async () => {
+  gesundheit.mockResolvedValue({ error: null });
+  render(<Onboarding start={{ ...bereit, einwilligungB: true, antworten: { einschraenkungen: ["knie"] } }} />);
+  ueberspringe(3);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Nein / möchte ich nicht sagen" }));
+  weiter();
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.geraete });
+  expect(gesundheit).toHaveBeenCalledWith(expect.anything(), { restrictions: [] });
+  expect(erteile).not.toHaveBeenCalled();
+  ueberspringe(2);
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.zusammenfassung });
+  expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toContain("Rücksicht: nicht angegeben");
+});
+
+test("gespeicherte Ziele und Notiz: Abwählen und Löschen wird gespeichert", async () => {
+  speichere.mockResolvedValue({ error: null });
+  render(<Onboarding start={{ ...bereit, antworten: { ziele: ["kraeftiger"], zielNotiz: "Platzhalter" } }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Kräftiger werden" }));
+  fireEvent.change(screen.getByLabelText(/In deinen Worten/), { target: { value: "" } });
+  weiter();
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.zeit });
+  expect(speichere).toHaveBeenCalledWith(expect.anything(), { goals: [], goal_note: null });
+});
+
+test("Überspringen nach dem Abwählen lässt die gespeicherte Antwort stehen", () => {
+  render(<Onboarding start={{ ...bereit, antworten: { ziele: ["kraeftiger"] } }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Kräftiger werden" }));
+  fireEvent.click(screen.getByRole("button", { name: "Überspringen" }));
+  expect(frage(FRAGEN.zeit)).toBeTruthy();
+  expect(speichere).not.toHaveBeenCalled();
+});
+
+test("ohne gespeicherte Einschränkung: Haken B und „Nein“ erteilen B nicht und legen keine Zeile an", async () => {
+  render(<Onboarding start={bereit} />);
+  ueberspringe(3);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Ich willige ausdrücklich ein." }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Nein / möchte ich nicht sagen" }));
+  weiter();
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.geraete });
+  expect(erteile).not.toHaveBeenCalled();
+  expect(gesundheit).not.toHaveBeenCalled();
+});
+
+test("ohne gespeicherte Notiz: getippt und wieder geleert erteilt B nicht und legt keine Zeile an", async () => {
+  render(<Onboarding start={bereit} />);
+  ueberspringe(3);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Ich willige ausdrücklich ein." }));
+  fireEvent.change(screen.getByLabelText(/Kurztext/), { target: { value: "Platzhalter" } });
+  fireEvent.change(screen.getByLabelText(/Kurztext/), { target: { value: "" } });
+  weiter();
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.geraete });
+  expect(erteile).not.toHaveBeenCalled();
+  expect(gesundheit).not.toHaveBeenCalled();
+});
+
+test("ohne gespeicherte Ziele: an- und wieder abgewählt schreibt nichts ins Profil", async () => {
+  render(<Onboarding start={bereit} />);
+  fireEvent.click(screen.getByRole("button", { name: "Kräftiger werden" }));
+  fireEvent.click(screen.getByRole("button", { name: "Kräftiger werden" }));
+  weiter();
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.zeit });
+  expect(speichere).not.toHaveBeenCalled();
+});
+
+test("gespeicherte Notiz: Leeren schreibt null, ohne B neu zu erteilen", async () => {
+  gesundheit.mockResolvedValue({ error: null });
+  render(<Onboarding start={{ ...bereit, einwilligungB: true, antworten: { einschraenkungNotiz: "Platzhalter" } }} />);
+  ueberspringe(3);
+  fireEvent.change(screen.getByLabelText(/Kurztext/), { target: { value: "" } });
+  weiter();
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.geraete });
+  expect(gesundheit).toHaveBeenCalledWith(expect.anything(), { restriction_note: null });
+  expect(erteile).not.toHaveBeenCalled();
+});
+
+test("in dieser Sitzung gespeicherte Einschränkung lässt sich leeren, zweites Leeren schreibt nicht mehr", async () => {
+  gesundheit.mockResolvedValue({ error: null });
+  render(<Onboarding start={{ ...bereit, einwilligungB: true }} />);
+  ueberspringe(3);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Knie" }));
+  weiter();
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.geraete });
+  expect(gesundheit).toHaveBeenLastCalledWith(expect.anything(), { restrictions: ["knie"] });
+
+  fireEvent.click(screen.getByRole("button", { name: "Zurück" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Knie" }));
+  weiter();
+  await waitFor(() => expect(gesundheit).toHaveBeenCalledTimes(2));
+  expect(gesundheit).toHaveBeenLastCalledWith(expect.anything(), { restrictions: [] });
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.geraete });
+
+  fireEvent.click(screen.getByRole("button", { name: "Zurück" }));
+  weiter();
+  await screen.findByRole("heading", { level: 1, name: FRAGEN.geraete });
+  expect(gesundheit).toHaveBeenCalledTimes(2);
+});
+
+test("Überspringen nach „Nein“ lässt die gespeicherte Einschränkung stehen", () => {
+  render(<Onboarding start={{ ...bereit, einwilligungB: true, antworten: { einschraenkungen: ["knie"] } }} />);
+  ueberspringe(3);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Nein / möchte ich nicht sagen" }));
+  fireEvent.click(screen.getByRole("button", { name: "Überspringen" }));
+  expect(frage(FRAGEN.geraete)).toBeTruthy();
+  expect(gesundheit).not.toHaveBeenCalled();
+  expect(erteile).not.toHaveBeenCalled();
 });
 
 test("Schritt 5 speichert die Geräte mit festen Schlüsseln", async () => {

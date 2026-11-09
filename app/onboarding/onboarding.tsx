@@ -110,7 +110,7 @@ export function Onboarding({ start }: { start: Start }) {
     if (!bFrei) teil = Object.fromEntries(Object.entries(teil).filter(([f]) => !NUR_MIT_B.includes(f as keyof Antworten)));
     // Einwilligung B nur erteilen, wenn wirklich Gesundheitsangaben zu speichern sind (Datenminimierung).
     const mitB = { ...einwilligungen, ...(bFrei && { B: true }) };
-    const daten = zuSpeichern(teil, mitB);
+    const daten = zuSpeichern(teil, mitB, gespeichert);
     const supabase = createClient();
     const ok = await mitBusy(async () => {
       const brauchtB = Boolean(daten.gesundheit || daten.koerperwerte) && einwilligungen.B !== true;
