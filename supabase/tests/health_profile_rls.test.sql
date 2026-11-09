@@ -15,6 +15,8 @@ values
   ('00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'b@example.test');
 insert into lifestyle.health_profile (user_id, restrictions)
 values ('00000000-0000-0000-0000-00000000000b', '{knie}');
+insert into lifestyle.consents (user_id, kind, text_version)
+values ('00000000-0000-0000-0000-00000000000a', 'B', 'v1');
 
 -- Nutzer A
 set local role authenticated;

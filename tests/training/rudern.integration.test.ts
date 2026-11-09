@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { describe, expect, test } from "vitest";
+import { erteileEinwilligung } from "../../lib/consent/consent";
 import { beendeWorkout, saetzeDesWorkouts, speichereSatz, starteWorkout } from "../../lib/training/log";
 
 // Lokaler Stack: `supabase start` + `supabase db reset`, dann SUPABASE_URL und SUPABASE_ANON_KEY aus `supabase status -o env` setzen.
@@ -13,6 +14,9 @@ async function konto(name: string) {
   const client = neuerClient();
   const { error } = await client.auth.signUp({ email: `${name}-${Date.now()}@example.test`, password: "platzhalter-123" });
   if (error) throw error;
+  // Mit Einwilligung B, sonst scheitert Bs Schreibversuch unten an der Einwilligung statt am fremden Workout.
+  const einwilligung = await erteileEinwilligung(alsLogClient(client), "B");
+  if (einwilligung.error) throw einwilligung.error;
   return client;
 }
 

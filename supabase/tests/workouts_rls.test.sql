@@ -20,6 +20,8 @@ values ('30000000-0000-0000-0000-000000000001', 'test-rudern', 'Test-Rudern', 'k
 insert into lifestyle.workouts (id, user_id) values ('40000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000b');
 insert into lifestyle.workout_sets (workout_id, user_id, exercise_id, set_no, reps)
 values ('40000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000b', '30000000-0000-0000-0000-000000000001', 1, 10);
+insert into lifestyle.consents (user_id, kind, text_version)
+values ('00000000-0000-0000-0000-00000000000a', 'B', 'v1');
 
 -- Nutzer A
 set local role authenticated;
