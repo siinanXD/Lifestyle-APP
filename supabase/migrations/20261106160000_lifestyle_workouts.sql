@@ -1,7 +1,7 @@
 -- SIN-1272: Trainingsprotokoll (Art. 9, Einwilligung B). Spalten folgen dem Typ `Einheit` aus lib/training/progression.ts.
 create table lifestyle.workouts (
   id uuid primary key default gen_random_uuid(), -- der Client darf die UUID setzen (Offline-Sync)
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references lifestyle.profiles (id) on delete cascade,
   started_at timestamptz not null default now(),
   ended_at timestamptz,
   plan_day_id uuid, -- Fremdschlüssel folgt mit dem Plan-Issue
@@ -13,7 +13,7 @@ create table lifestyle.workouts (
 create table lifestyle.workout_sets (
   id uuid primary key default gen_random_uuid(),
   workout_id uuid not null references lifestyle.workouts (id) on delete cascade,
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references lifestyle.profiles (id) on delete cascade,
   exercise_id uuid not null references lifestyle.exercises (id),
   set_no smallint not null check (set_no between 1 and 50),
   reps smallint not null check (reps between 0 and 500),
