@@ -14,6 +14,8 @@ insert into auth.users (id, instance_id, aud, role, email)
 values
   ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'a@example.test'),
   ('00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'b@example.test');
+-- Die Profilzeile legt ensureProfile() beim Login an; die Gesundheitstabellen hängen daran.
+insert into lifestyle.profiles (id) select id from auth.users where email like '%@example.test';
 insert into lifestyle.body_measurements (id, user_id, measured_on, weight_kg)
 values ('20000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000b', '2026-11-01', 70);
 insert into lifestyle.consents (user_id, kind, text_version)

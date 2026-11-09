@@ -1,7 +1,7 @@
 -- SIN-1259: Körperwerte (Art. 9, Einwilligung B), eine Messung je Tag. Bewusst kein Körperfett, kein BMI, kein Zielgewicht.
 create table lifestyle.body_measurements (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references lifestyle.profiles (id) on delete cascade,
   measured_on date not null default current_date,
   weight_kg numeric(5,1) check (weight_kg between 20 and 400),
   waist_cm numeric(4,1) check (waist_cm between 10 and 300),

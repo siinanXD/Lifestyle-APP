@@ -1,7 +1,7 @@
 -- SIN-1258: Einschränkungen und Größe sind Gesundheitsdaten (Art. 9, Einwilligung B) und liegen getrennt von
 -- lifestyle.profiles, damit Widerruf B genau diese Zeile löschen kann. Keine Diagnose- oder Medikamentenfelder.
 create table lifestyle.health_profile (
-  user_id uuid primary key references auth.users (id) on delete cascade,
+  user_id uuid primary key references lifestyle.profiles (id) on delete cascade,
   restrictions text[] not null default '{}'
     constraint health_profile_restrictions_values
     check (restrictions <@ array['knie', 'ruecken', 'schulter', 'handgelenk', 'sonstiges']::text[]),
