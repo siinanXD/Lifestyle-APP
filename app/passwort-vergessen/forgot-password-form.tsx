@@ -27,20 +27,25 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "24rem", margin: "0 auto" }}>
+    <main className="page" data-narrow>
+      <p className="eyebrow">Lifestyle App</p>
       <h1>Passwort vergessen?</h1>
       <p>Wir schicken dir einen Link, mit dem du ein neues Passwort wählst.</p>
-      <form method="post" onSubmit={onSubmit} noValidate style={{ display: "grid", gap: "1rem" }}>
+      <form method="post" onSubmit={onSubmit} noValidate className="stack">
         <Field name="email" label="E-Mail" type="email" autoComplete="email" error={error.email} />
-        {error.form && <p role="alert">{error.form}</p>}
+        {error.form && (
+          <p role="alert" className="error">
+            {error.form}
+          </p>
+        )}
         {info && <p role="status">{info}</p>}
-        <button type="submit" disabled={busy} style={{ padding: "0.75rem", fontSize: "1rem" }}>
+        <button type="submit" disabled={busy} className="btn">
           Link schicken
         </button>
       </form>
-      <p>
-        <a href="/login">Zurück zur Anmeldung</a>
-      </p>
+      <a href="/login" className="link">
+        Zurück zur Anmeldung
+      </a>
     </main>
   );
 }
