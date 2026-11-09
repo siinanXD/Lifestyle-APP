@@ -10,7 +10,10 @@ values
   ('00000000-0000-0000-0000-00000000000c', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'n@example.test'),
   ('00000000-0000-0000-0000-00000000000d', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'r@example.test');
 -- Die Profilzeile legt ensureProfile() beim Login an; die Gesundheitstabellen hängen daran.
-insert into lifestyle.profiles (id) select id from auth.users where email like '%@example.test';
+insert into lifestyle.profiles (id)
+values
+  ('00000000-0000-0000-0000-00000000000a'), ('00000000-0000-0000-0000-00000000000b'),
+  ('00000000-0000-0000-0000-00000000000c'), ('00000000-0000-0000-0000-00000000000d');
 insert into lifestyle.consents (user_id, kind, text_version, revoked_at)
 values
   ('00000000-0000-0000-0000-00000000000a', 'B', 'v1', null),
