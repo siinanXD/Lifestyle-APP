@@ -27,6 +27,9 @@ export default async function TrainingPage() {
     <main className="page stack">
       <h1>Training</h1>
       <TrainingStarten />
+      <Link href="/training/uebungen" className="link">
+        Übungsbibliothek
+      </Link>
       <section className="stack">
         <h2>Letzte Trainings</h2>
         {workouts.daten.length === 0 ? (

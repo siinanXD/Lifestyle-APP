@@ -58,6 +58,7 @@ test("Training: mit B zeigt Start-Knopf und die letzten Trainings", async () => 
   log.letzteWorkouts.mockResolvedValue({ ok: true, daten: [{ id: "w7", started_at: "2026-11-06T10:00:00Z", ended_at: null, regeneration: null }] });
   render(await TrainingPage());
   expect(screen.getByRole("button", { name: "Freies Training starten" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Übungsbibliothek" }).getAttribute("href")).toBe("/training/uebungen");
   expect(screen.getByRole("link", { name: /06\.11\.2026/ }).getAttribute("href")).toBe("/training/protokoll/w7");
   expect(log.letzteWorkouts).toHaveBeenCalledWith(expect.anything(), 5);
 });
