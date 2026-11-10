@@ -114,8 +114,10 @@ function werteAus(e: Eingabe, von: string, bis: string) {
   const schlaf = (e.schlaf ?? []).filter((s) => merke(s.datum)).map((s) => s.dauer_min);
   const haekchen = (e.gewohnheiten ?? []).filter((g) => merke(g.datum)).length;
 
-  const kategorien: Record<string, number> = {};
-  for (const a of aktivitaeten) kategorien[a.kategorie] = (kategorien[a.kategorie] ?? 0) + 1;
+  // Map statt Objekt: Namen wie "constructor" oder "__proto__" träfen sonst geerbte Eigenschaften.
+  const zaehler = new Map<string, number>();
+  for (const a of aktivitaeten) zaehler.set(a.kategorie, (zaehler.get(a.kategorie) ?? 0) + 1);
+  const kategorien: Record<string, number> = Object.fromEntries(zaehler);
 
   const kennzahlen: Kennzahlen = {
     einheiten: workouts.length,

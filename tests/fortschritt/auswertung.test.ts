@@ -203,3 +203,18 @@ describe("zeitraum", () => {
     expect(zeitraum("monat", monatsende, "Europe/Berlin")).toEqual({ von: "2026-04-01", bis: "2026-04-30" });
   });
 });
+
+describe("auswertung: Kategorienamen", () => {
+  test("zählt auch Kategorien, die wie Objekt-Eigenschaften heißen", () => {
+    const start = "2026-11-10T08:00:00Z";
+    const a = auswertung({
+      von: "2026-11-09",
+      bis: "2026-11-15",
+      zeitzone: "Europe/Berlin",
+      tageProWoche: null,
+      aktivitaeten: ["constructor", "constructor", "toString", "__proto__"].map((kategorie) => ({ kategorie, started_at: start, dauer_min: 10 })),
+    });
+    const zahlen = a.aktivitaetenNachKategorie!;
+    expect(Object.entries(zahlen).sort()).toEqual([["__proto__", 1], ["constructor", 2], ["toString", 1]]);
+  });
+});
