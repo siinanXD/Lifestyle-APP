@@ -218,3 +218,36 @@ describe("auswertung: Kategorienamen", () => {
     expect(Object.entries(zahlen).sort()).toEqual([["__proto__", 1], ["constructor", 2], ["toString", 1]]);
   });
 });
+
+describe("auswertung: unbekannte Dauer", () => {
+  const basis = { zeitzone: "Europe/Berlin", tageProWoche: null } as const;
+
+  test("ohne erfasste Dauer bleiben die aktiven Minuten leer statt 0", () => {
+    const a = auswertung({
+      ...basis,
+      von: "2026-11-09",
+      bis: "2026-11-15",
+      workouts: [{ id: "w1", started_at: "2026-11-10T08:00:00Z", ended_at: null }],
+      aktivitaeten: [
+        { kategorie: "laufen", started_at: "2026-11-11T08:00:00Z", dauer_min: null },
+        { kategorie: "laufen", started_at: "2026-11-03T08:00:00Z", dauer_min: 30 }, // Vorwoche
+      ],
+    });
+    expect(a.einheiten).toBe(1);
+    expect(a.aktiveMinuten).toBeNull();
+    expect(a.veraenderung?.aktiveMinuten ?? null).toBeNull(); // kein "-30" aus fehlenden Daten
+  });
+
+  test("eine bekannte Dauer zählt, die unbekannte daneben nicht als 0-Minuten-Eintrag", () => {
+    const a = auswertung({
+      ...basis,
+      von: "2026-11-09",
+      bis: "2026-11-15",
+      aktivitaeten: [
+        { kategorie: "laufen", started_at: "2026-11-10T08:00:00Z", dauer_min: 20 },
+        { kategorie: "yoga", started_at: "2026-11-11T08:00:00Z", dauer_min: null },
+      ],
+    });
+    expect(a.aktiveMinuten).toBe(20);
+  });
+});

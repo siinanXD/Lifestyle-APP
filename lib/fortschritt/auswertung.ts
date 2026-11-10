@@ -95,9 +95,10 @@ function werteAus(e: Eingabe, von: string, bis: string) {
   const workouts = (e.workouts ?? []).filter((w) => merke(tagVon(w.started_at)));
   const workoutIds = new Set(workouts.map((w) => w.id));
   const aktivitaeten = (e.aktivitaeten ?? []).filter((a) => merke(tagVon(a.started_at)));
+  // Unbekannte Dauer (Training nicht beendet, Aktivität ohne Minuten) zählt nicht als 0: sonst wird aus fehlenden Daten ein Rückgang.
   const minuten = [
-    ...workouts.map((w) => (w.ended_at ? (Date.parse(w.ended_at) - Date.parse(w.started_at)) / 60000 : 0)),
-    ...aktivitaeten.map((a) => a.dauer_min ?? 0),
+    ...workouts.flatMap((w) => (w.ended_at ? [(Date.parse(w.ended_at) - Date.parse(w.started_at)) / 60000] : [])),
+    ...aktivitaeten.flatMap((a) => (a.dauer_min === null ? [] : [a.dauer_min])),
   ];
   // Volumen zählt zum Tag der Einheit; Sätze ohne Gewicht (Körpergewicht) bleiben außen vor.
   const volumen = (e.saetze ?? []).flatMap((s) => (workoutIds.has(s.workout_id) && s.weight_kg !== null ? [s.reps * s.weight_kg] : []));
