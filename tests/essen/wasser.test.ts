@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { neuerEintrag } from "../../lib/offline/queue";
 import { istGueltigeMenge, letzteTage, loescheWasser, tagessumme, trageWasserEin, wasserSeit } from "../../lib/essen/wasser";
 
 // Kette wie im Supabase-Client: jede Methode gibt sich selbst zurück, `await` liefert das Ergebnis der jeweiligen Tabelle.
@@ -86,6 +87,13 @@ describe("trageWasserEin", () => {
     expect(await trageWasserEin(client, 250)).toEqual({ ok: true, daten: zeile });
     const inserts = aufrufe.filter(([m]) => m === "insert");
     expect(inserts).toEqual([["insert", [{ user_id: "u1", amount_ml: 250 }]]]);
+  });
+
+  test("mit Client-id (Offline-Warteschlange, Art „wasser“) wird genau diese id geschrieben", async () => {
+    const eintrag = neuerEintrag("wasser", { ml: 500 });
+    const { client, aufrufe } = fake({ ...mitB, water_logs: { data: null, error: null } });
+    await trageWasserEin(client, 500, { id: eintrag.id });
+    expect(aufrufe.filter(([m]) => m === "insert")).toEqual([["insert", [{ id: eintrag.id, user_id: "u1", amount_ml: 500 }]]]);
   });
 
   test.each([0, 5001])("lehnt %s ml ab, ohne zu schreiben", async (ml) => {

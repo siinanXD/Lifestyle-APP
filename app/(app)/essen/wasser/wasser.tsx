@@ -37,7 +37,7 @@ export function Wasser({ eintraege: start }: { eintraege: Wassereintrag[] }) {
     if (!istGueltigeMenge(wert)) return setFehler(`Bitte gib die Menge als ganze Zahl von ${MENGE_MIN} bis ${MENGE_MAX} ml ein.`);
     setFehler("");
     setBusy(true);
-    const r = await trageWasserEin(createClient(), wert);
+    const r = await trageWasserEin(createClient(), wert, { id: crypto.randomUUID() });
     setBusy(false);
     if (!r.ok) return setFehler(FEHLER);
     setEintraege((e) => [r.daten, ...e]);

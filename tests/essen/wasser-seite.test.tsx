@@ -53,7 +53,7 @@ test("Schnelltaste fügt genau einen Eintrag mit der richtigen Menge hinzu", asy
   expect(await screen.findByRole("list", { name: "Einträge heute" })).toBeTruthy();
   expect(eintraege()[0].textContent).toMatch(/^250 ml/);
   expect(wasser.trageWasserEin).toHaveBeenCalledTimes(1);
-  expect(wasser.trageWasserEin).toHaveBeenCalledWith(expect.anything(), 250);
+  expect(wasser.trageWasserEin).toHaveBeenCalledWith(expect.anything(), 250, { id: expect.any(String) });
   expect(summe()).toBe("250 ml");
   expect(eintraege()).toHaveLength(1);
 });
@@ -73,7 +73,7 @@ test("freies Feld trägt eine gültige Menge ein", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Eintragen" }));
   expect(await screen.findByRole("list", { name: "Einträge heute" })).toBeTruthy();
   expect(eintraege()[0].textContent).toMatch(/^330 ml/);
-  expect(wasser.trageWasserEin).toHaveBeenCalledWith(expect.anything(), 330);
+  expect(wasser.trageWasserEin).toHaveBeenCalledWith(expect.anything(), 330, { id: expect.any(String) });
 });
 
 test("Fehler beim Speichern wird ruhig gemeldet, Summe bleibt", async () => {

@@ -29,7 +29,9 @@ export function letzteTage(eintraege: Pick<Wassereintrag, "amount_ml" | "logged_
   });
 }
 
-export async function trageWasserEin(client: Client, ml: number): Promise<Ergebnis<Wassereintrag>> {
+// `id` vom Client (wie bei starteWorkout): Die Offline-Warteschlange (Art „wasser“) sendet mit der id ihres Eintrags,
+// eine Wiederholung trifft dann denselben Schlüssel und scheitert mit 23505, statt doppelt zu zählen.
+export async function trageWasserEin(client: Client, ml: number, { id }: { id?: string } = {}): Promise<Ergebnis<Wassereintrag>> {
   if (!istGueltigeMenge(ml)) return { ok: false, fehler: "ungueltig" };
   const userId = await nutzerId(client);
   if (!userId) return { ok: false, fehler: "no_user" };
@@ -38,7 +40,7 @@ export async function trageWasserEin(client: Client, ml: number): Promise<Ergebn
   if (!einwilligung.ok) return einwilligung;
   if (!hatEinwilligung(einwilligung.daten, "B")) return { ok: false, fehler: "keine_einwilligung" };
   return fuehreAus<Wassereintrag>(
-    client.from("water_logs").insert({ user_id: userId, amount_ml: ml }).select("id, amount_ml, logged_at").single(),
+    client.from("water_logs").insert({ ...(id && { id }), user_id: userId, amount_ml: ml }).select("id, amount_ml, logged_at").single(),
   );
 }
 
