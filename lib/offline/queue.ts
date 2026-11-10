@@ -18,9 +18,13 @@ export interface Speicher {
   alle(): Promise<Eintrag[]>;
   /** Gleiche `id` überschreibt, statt zu verdoppeln. */
   hinzufuegen(eintrag: Eintrag): Promise<void>;
-  entfernen(id: string): Promise<void>;
-  /** Ändert nur Vorhandenes, damit ein Lauf nach `leeren()` (Abmelden) nichts zurückschreibt. */
-  aktualisieren(eintrag: Eintrag): Promise<void>;
+  /**
+   * Mit `nurWenn` nur, wenn der gespeicherte Eintrag noch genau diesem entspricht – Vergleich und Löschen in einem Schritt,
+   * damit ein Ersatz, der dazwischen eintrifft, nicht verloren geht. Ergebnis: ob entfernt wurde.
+   */
+  entfernen(id: string, nurWenn?: Eintrag): Promise<boolean>;
+  /** Ändert nur Vorhandenes, damit ein Lauf nach `leeren()` (Abmelden) nichts zurückschreibt; `nurWenn` wie bei `entfernen`. Ergebnis: ob geschrieben wurde. */
+  aktualisieren(eintrag: Eintrag, nurWenn?: Eintrag): Promise<boolean>;
   leeren(): Promise<void>;
 }
 
@@ -70,26 +74,26 @@ export async function verarbeite(queue: Speicher, senden: Senden, uhr: () => num
         (r) => (r.ok ? null : r.fehler || "netz"),
         () => "netz",
       );
-    // Wurde der Eintrag ersetzt, während er unterwegs war, gilt Ergebnis und Zähler nur für die alte Fassung: die neue bleibt unangetastet.
-    const danach = (await queue.alle()).find((e) => e.id === eintrag.id);
-    const unveraendert = danach !== undefined && JSON.stringify(danach) === JSON.stringify(eintrag);
-    if (fehler === null) {
-      if (unveraendert) await queue.entfernen(eintrag.id);
-      gesendet++;
-      continue;
-    }
-    if (!unveraendert) continue;
+    // Ergebnis und Zähler gelten nur für die gesendete Fassung: Der Speicher schreibt oder löscht nur, wenn sie noch unverändert dasteht.
     const versuche = eintrag.versuche + 1;
-    if (!istVoruebergehend(fehler)) {
-      await queue.aktualisieren({ ...eintrag, versuche, fehlgeschlagen: fehler });
+    const dauerhaft = fehler !== null && (!istVoruebergehend(fehler) || versuche >= MAX_VERSUCHE);
+    const erledigt =
+      fehler === null
+        ? await queue.entfernen(eintrag.id, eintrag)
+        : await queue.aktualisieren(
+            dauerhaft
+              ? { ...eintrag, versuche, fehlgeschlagen: fehler }
+              : { ...eintrag, versuche, naechsterVersuchAb: new Date(uhr() + wartezeitMs(versuche)).toISOString() },
+            eintrag,
+          );
+    if (fehler === null) gesendet++;
+    if (!erledigt) {
+      // Ersetzt, während er unterwegs war: Die neue Fassung muss vor allem Späteren hinaus, also endet der Durchgang hier.
+      // Ganz verschwunden (Abmelden): weiter, die übrigen fallen beim nächsten Lesen ebenfalls weg.
+      if ((await queue.alle()).some((e) => e.id === eintrag.id)) break;
       continue;
     }
-    await queue.aktualisieren(
-      versuche >= MAX_VERSUCHE
-        ? { ...eintrag, versuche, fehlgeschlagen: fehler }
-        : { ...eintrag, versuche, naechsterVersuchAb: new Date(uhr() + wartezeitMs(versuche)).toISOString() },
-    );
-    break; // Netz weg: der Rest bleibt unangetastet
+    if (fehler !== null && !dauerhaft) break; // Netz weg: der Rest bleibt unangetastet
   }
   const rest = await queue.alle();
   const fehlgeschlagen = rest.filter((e) => e.fehlgeschlagen).length;

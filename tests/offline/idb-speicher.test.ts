@@ -103,3 +103,20 @@ describe("idbSpeicher", () => {
     expect(await idbSpeicher(factory).alle()).toEqual([]);
   });
 });
+
+describe("idbSpeicher: bedingtes Entfernen und Ändern", () => {
+  test("mit nurWenn wird nur die unveränderte Fassung entfernt oder geändert", async () => {
+    const speicher = idbSpeicher(attrappe().factory);
+    const alt = eintrag("a");
+    await speicher.hinzufuegen(eintrag("a", { versuche: 3 })); // inzwischen ersetzt
+    expect(await speicher.entfernen("a", alt)).toBe(false);
+    expect(await speicher.aktualisieren(eintrag("a", { versuche: 9 }), alt)).toBe(false);
+    expect(await speicher.alle()).toEqual([eintrag("a", { versuche: 3 })]);
+
+    const aktuell = eintrag("a", { versuche: 3 });
+    expect(await speicher.aktualisieren(eintrag("a", { versuche: 4 }), aktuell)).toBe(true);
+    expect(await speicher.entfernen("a", eintrag("a", { versuche: 4 }))).toBe(true);
+    expect(await speicher.entfernen("a")).toBe(false); // nichts mehr da
+    expect(await speicher.alle()).toEqual([]);
+  });
+});

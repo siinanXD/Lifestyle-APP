@@ -4,6 +4,8 @@ import type { Eintrag, Speicher } from "./queue";
 const DATENBANK = "lifestyle-offline";
 const STORE = "queue";
 
+const gleich = (ist: Eintrag, soll: Eintrag | undefined) => soll === undefined || JSON.stringify(ist) === JSON.stringify(soll);
+
 export function idbSpeicher(idb: IDBFactory = indexedDB): Speicher {
   let offen: Promise<IDBDatabase> | undefined;
   const datenbank = () =>
@@ -30,13 +32,31 @@ export function idbSpeicher(idb: IDBFactory = indexedDB): Speicher {
   return {
     alle: () => transaktion<Eintrag[]>("readonly", (s) => s.getAll()),
     hinzufuegen: async (eintrag) => void (await transaktion("readwrite", (s) => s.put(eintrag))),
-    entfernen: async (id) => void (await transaktion("readwrite", (s) => s.delete(id))),
-    aktualisieren: async (eintrag) =>
-      void (await transaktion("readwrite", (s) => {
-        const vorhanden = s.get(eintrag.id);
-        vorhanden.onsuccess = () => vorhanden.result && s.put(eintrag);
+    // Lesen, vergleichen und schreiben in EINER Transaktion: ein Ersatz dazwischen ist ausgeschlossen.
+    entfernen: async (id, nurWenn) => {
+      let entfernt = false;
+      await transaktion("readwrite", (s) => {
+        const vorhanden = s.get(id);
+        vorhanden.onsuccess = () => {
+          entfernt = vorhanden.result !== undefined && gleich(vorhanden.result, nurWenn);
+          if (entfernt) s.delete(id);
+        };
         return vorhanden;
-      })),
+      });
+      return entfernt;
+    },
+    aktualisieren: async (eintrag, nurWenn) => {
+      let geschrieben = false;
+      await transaktion("readwrite", (s) => {
+        const vorhanden = s.get(eintrag.id);
+        vorhanden.onsuccess = () => {
+          geschrieben = vorhanden.result !== undefined && gleich(vorhanden.result, nurWenn);
+          if (geschrieben) s.put(eintrag);
+        };
+        return vorhanden;
+      });
+      return geschrieben;
+    },
     leeren: async () => void (await transaktion("readwrite", (s) => s.clear())),
   };
 }

@@ -2,13 +2,14 @@ import { describe, expect, test } from "vitest";
 import { MAX_VERSUCHE, neuerEintrag, verarbeite, wartezeitMs, type Eintrag, type Senden, type Speicher } from "../../lib/offline/queue";
 
 // In-Memory-Speicher mit demselben Verhalten wie die IndexedDB-Fassung; nur erfundene Daten.
+const gleich = (ist: Eintrag | undefined, soll: Eintrag | undefined) => soll === undefined || JSON.stringify(ist) === JSON.stringify(soll);
 function imSpeicher(start: Eintrag[] = []): Speicher {
   const zeilen = new Map(start.map((e) => [e.id, e]));
   return {
     alle: async () => [...zeilen.values()],
     hinzufuegen: async (e) => void zeilen.set(e.id, e),
-    entfernen: async (id) => void zeilen.delete(id),
-    aktualisieren: async (e) => void (zeilen.has(e.id) && zeilen.set(e.id, e)),
+    entfernen: async (id, nurWenn) => gleich(zeilen.get(id), nurWenn) && zeilen.delete(id),
+    aktualisieren: async (e, nurWenn) => zeilen.has(e.id) && gleich(zeilen.get(e.id), nurWenn) && (zeilen.set(e.id, e), true),
     leeren: async () => zeilen.clear(),
   };
 }
@@ -228,5 +229,36 @@ describe("verarbeite: Eintrag wird während des Durchgangs ersetzt", () => {
     const stand = await verarbeite(queue, senden, () => JETZT);
     expect(stand).toEqual({ gesendet: 1, offen: 1, fehlgeschlagen: 0 });
     expect((await queue.alle())[0].daten).toEqual({ wdh: 12 });
+  });
+});
+
+describe("verarbeite: letzte Runde (atomar, Reihenfolge)", () => {
+  test("ein Ersatz zwischen Prüfung und Löschen geht nicht verloren", async () => {
+    const basis = imSpeicher([eintrag("b", 2, { daten: { wdh: 5 } })]);
+    // Der Ersatz trifft genau in dem Moment ein, in dem die Queue den gesendeten Eintrag entfernen will.
+    const queue: Speicher = {
+      ...basis,
+      entfernen: async (id, nurWenn) => {
+        await basis.hinzufuegen(eintrag("b", 2, { daten: { wdh: 12 } }));
+        return basis.entfernen(id, nurWenn);
+      },
+    };
+    await verarbeite(queue, sender().senden, () => JETZT);
+    expect((await queue.alle()).map((e) => e.daten)).toEqual([{ wdh: 12 }]);
+  });
+
+  test("nach einem Ersatz hält der Durchgang an, damit Späteres nicht vor dem Ersatz hinausgeht", async () => {
+    const queue = imSpeicher([eintrag("u", 1, { daten: { wdh: 5 } }), eintrag("loeschen", 2, { art: "satz_loeschen" })]);
+    const gesendet: string[] = [];
+    const senden: Senden = async (e) => {
+      gesendet.push(`${e.id}:${JSON.stringify(e.daten)}`);
+      if (gesendet.length === 1) await queue.hinzufuegen(eintrag("u", 1, { daten: { wdh: 12 } }));
+      return OK;
+    };
+    await verarbeite(queue, senden, () => JETZT);
+    expect(gesendet).toEqual(['u:{"wdh":5}']);
+    await verarbeite(queue, senden, () => JETZT);
+    expect(gesendet).toEqual(['u:{"wdh":5}', 'u:{"wdh":12}', 'loeschen:{"satzNr":2}']);
+    expect(await queue.alle()).toEqual([]);
   });
 });
