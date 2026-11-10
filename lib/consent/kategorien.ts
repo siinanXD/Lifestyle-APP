@@ -6,15 +6,15 @@ type Client = ReturnType<typeof createClient>;
 
 // Welche Tabelle gehört zu welcher Einwilligung (docs/PRIVACY.md, Abschnitt 2 und 3).
 // Jede Tabelle aus supabase/migrations steht hier genau einmal; tests/consent/kategorien.test.ts schlägt bei neuen Tabellen an.
-// Reihenfolge = Löschreihenfolge (Sätze vor Trainings, Planeinträge vor Plänen, Häkchen vor Gewohnheiten).
-// immer: Konto und Einwilligungsnachweis, bleiben bis zur Kontolöschung. referenz: ohne Nutzerbezug.
+// Reihenfolge = Löschreihenfolge (Sätze vor Trainings, Häkchen vor Gewohnheiten).
+// immer: Konto, Einwilligungsnachweis und Trainingspläne, bleiben bis zur Kontolöschung. referenz: ohne Nutzerbezug.
+// Pläne enthalten nur Übungen, Sätze und Wiederholungen und brauchen keine Einwilligung (Migration SIN-1282);
+// ein Widerruf von B darf sie deshalb nicht mitlöschen.
 export const TABELLEN = {
   A: ["habit_checks", "habits"],
   B: [
     "workout_sets",
     "workouts",
-    "plan_items",
-    "training_plans",
     "activity_logs",
     "comeback_checkins",
     "sleep_logs",
@@ -26,7 +26,7 @@ export const TABELLEN = {
   C: [],
   D: [],
   E: [],
-  immer: ["profiles", "consents"],
+  immer: ["profiles", "consents", "plan_items", "training_plans"],
   referenz: ["exercises"],
 } as const satisfies Record<Art | "immer" | "referenz", readonly string[]>;
 
@@ -54,15 +54,25 @@ export async function widerrufe(supabase: Client, art: Art, { datenLoeschen }: {
   if (!id) return { error: { code: "no_user" }, widerrufen: false };
   const { error: widerrufFehler } = await widerrufeEinwilligung(supabase, art);
   if (widerrufFehler) return { error: widerrufFehler, widerrufen: false };
-  if (datenLoeschen) {
-    if (art === "A") {
-      const { error } = await supabase.from("profiles").update(PROFILANGABEN_A).eq("id", id);
-      if (error) return { error, widerrufen: true };
-    }
-    for (const tabelle of TABELLEN[art]) {
-      const { error } = await supabase.from(tabelle).delete().eq("user_id", id);
-      if (error) return { error, widerrufen: true };
-    }
+  return { error: datenLoeschen ? await loesche(supabase, art, id) : null, widerrufen: true };
+}
+
+async function loesche(supabase: Client, art: Art, id: string) {
+  if (art === "A") {
+    const { error } = await supabase.from("profiles").update(PROFILANGABEN_A).eq("id", id);
+    if (error) return error;
   }
-  return { error: null, widerrufen: true };
+  for (const tabelle of TABELLEN[art]) {
+    const { error } = await supabase.from(tabelle).delete().eq("user_id", id);
+    if (error) return error;
+  }
+  return null;
+}
+
+// Löschen ohne offene Einwilligung: für Daten, die nach einem Widerruf noch da sind (z. B. abgebrochenes Löschen).
+export async function loescheDaten(supabase: Client, art: Art) {
+  const { data } = await supabase.auth.getUser();
+  const id = data.user?.id;
+  if (!id) return { error: { code: "no_user" } };
+  return { error: await loesche(supabase, art, id) };
 }

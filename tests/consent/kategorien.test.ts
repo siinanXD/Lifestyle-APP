@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { PROFILANGABEN_A, TABELLEN, widerrufe } from "../../lib/consent/kategorien";
+import { loescheDaten, PROFILANGABEN_A, TABELLEN, widerrufe } from "../../lib/consent/kategorien";
 
 // Schema aus den Migrationen: jede Tabelle, die eine Migration anlegt.
 const tabellenAusMigrationen = readdirSync("supabase/migrations")
@@ -20,7 +20,13 @@ describe("Zuordnung Tabelle → Einwilligung", () => {
   });
 
   test("Gesundheitsdaten-Tabellen gehören zu B", () => {
-    expect(TABELLEN.B).toEqual(expect.arrayContaining(["health_profile", "workouts", "workout_sets", "water_logs", "body_measurements", "training_plans", "plan_items", "activity_logs", "comeback_checkins", "sleep_logs", "meals"]));
+    expect(TABELLEN.B).toEqual(expect.arrayContaining(["health_profile", "workouts", "workout_sets", "water_logs", "body_measurements", "activity_logs", "comeback_checkins", "sleep_logs", "meals"]));
+  });
+
+  test("Trainingspläne brauchen keine Einwilligung und werden mit B nicht gelöscht", () => {
+    expect(TABELLEN.B).not.toContain("training_plans");
+    expect(TABELLEN.B).not.toContain("plan_items");
+    expect(TABELLEN.immer).toEqual(expect.arrayContaining(["training_plans", "plan_items"]));
   });
 
   test("A setzt nur Profilangaben zurück, nicht die Kontozeile", () => {
@@ -70,7 +76,6 @@ describe("widerrufe", () => {
     expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: null, widerrufen: true });
     expect(loeschungen(aufrufe)).toEqual(TABELLEN.B);
     expect(TABELLEN.B.indexOf("workout_sets")).toBeLessThan(TABELLEN.B.indexOf("workouts"));
-    expect(TABELLEN.B.indexOf("plan_items")).toBeLessThan(TABELLEN.B.indexOf("training_plans"));
     for (const t of TABELLEN.B) expect(aufrufe).toContainEqual({ tabelle: t, methode: "eq", args: ["user_id", "u1"] });
     // Regression: Ein zweites Fenster darf nach dem Leeren von workouts kein Training mehr starten können.
     // Dafür muss der Widerruf vor dem ersten Löschen stehen (die Datenbank lehnt Schreiben ohne offene Einwilligung B ab).
@@ -97,6 +102,13 @@ describe("widerrufe", () => {
     const { client, aufrufe } = fake({ fehlerBei: "consents" });
     expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: { code: "42501" }, widerrufen: false });
     expect(loeschungen(aufrufe)).toEqual([]);
+  });
+
+  test("loescheDaten löscht ohne Widerruf (Reste nach abgebrochenem Löschen)", async () => {
+    const { client, aufrufe } = fake();
+    expect(await loescheDaten(client, "B")).toEqual({ error: null });
+    expect(loeschungen(aufrufe)).toEqual(TABELLEN.B);
+    expect(widerruf(aufrufe)).toHaveLength(0);
   });
 
   test("ohne Anmeldung passiert nichts", async () => {

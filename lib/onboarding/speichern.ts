@@ -1,3 +1,5 @@
+import { hatEinwilligung, type Einwilligungszeile } from "../consent/consent";
+import { PROFILANGABEN_A } from "../consent/kategorien";
 import type { createClient } from "../supabase/client";
 
 type Client = ReturnType<typeof createClient>;
@@ -12,6 +14,13 @@ async function nutzerId(supabase: Client) {
 export async function speichereProfil(supabase: Client, felder: Record<string, unknown>) {
   const id = await nutzerId(supabase);
   if (!id) return { error: { code: "no_user" } };
+  // Die Datenbank prüft A an der Profilzeile nicht selbst. Ein Tab, der vor einem Widerruf geöffnet wurde,
+  // darf Ziele, Zeit, Erfahrung und Geräte danach nicht wieder speichern; Kontoangaben (Alter, Onboarding) gehen ohne A.
+  if (Object.keys(felder).some((feld) => feld in PROFILANGABEN_A)) {
+    const { data, error } = await supabase.from("consents").select("kind, revoked_at").eq("kind", "A");
+    if (error) return { error };
+    if (!hatEinwilligung((data ?? []) as Einwilligungszeile[], "A")) return { error: { code: "keine_einwilligung" } };
+  }
   const { error } = await supabase.from("profiles").update(felder).eq("id", id);
   return { error };
 }

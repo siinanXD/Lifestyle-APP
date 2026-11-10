@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ARTEN, EINWILLIGUNGSTEXTE } from "../../../../lib/consent/texte";
 import { createClient } from "../../../../lib/supabase/server";
-import { Widerruf } from "./widerruf";
+import { hatDaten } from "../../../../lib/consent/kategorien";
+import { DatenLoeschen, Widerruf } from "./widerruf";
 
 // Liest die Sitzung, nie vorab rendern.
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function EinwilligungenPage() {
                 <Link href={`/einwilligung/${art}?next=${encodeURIComponent("/konto/einwilligungen")}`} className="link">
                   Erteilen
                 </Link>
+                {hatDaten(art) && <DatenLoeschen art={art} />}
               </>
             )}
           </section>

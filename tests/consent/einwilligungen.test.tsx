@@ -1,13 +1,14 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import EinwilligungenPage from "../../app/(app)/konto/einwilligungen/page";
-import { Widerruf } from "../../app/(app)/konto/einwilligungen/widerruf";
+import { DatenLoeschen, Widerruf } from "../../app/(app)/konto/einwilligungen/widerruf";
 import AccountPage from "../../app/(app)/konto/page";
 
 const widerrufe = vi.hoisted(() => vi.fn());
+const loescheDaten = vi.hoisted(() => vi.fn());
 const zeilen = vi.hoisted(() => ({ data: [] as unknown[] | null, error: null as unknown }));
 const refresh = vi.hoisted(() => vi.fn());
-vi.mock("../../lib/consent/kategorien", async (original) => ({ ...(await original<object>()), widerrufe }));
+vi.mock("../../lib/consent/kategorien", async (original) => ({ ...(await original<object>()), widerrufe, loescheDaten }));
 vi.mock("../../lib/supabase/client", () => ({ createClient: () => ({}) }));
 vi.mock("../../lib/supabase/server", () => ({ createClient: async () => ({ from: () => ({ select: async () => zeilen }) }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh }) }));
@@ -42,6 +43,22 @@ test("zeigt A bis E mit Status; erteilte mit Datum und Textversion und „Widerr
   expect(a.getByText("Nicht erteilt")).toBeTruthy();
   expect(a.getByRole("link", { name: "Erteilen" }).getAttribute("href")).toBe("/einwilligung/A?next=%2Fkonto%2Feinwilligungen");
   expect(a.queryByRole("button", { name: "Widerrufen" })).toBeNull();
+  // Reste nach einem Widerruf bleiben löschbar, auch nach neuem Laden; ohne Daten (C) gibt es den Knopf nicht.
+  expect(a.getByRole("button", { name: "Gespeicherte Daten löschen" })).toBeTruthy();
+  expect(within(abschnitt("Fototagebuch")).queryByRole("button", { name: "Gespeicherte Daten löschen" })).toBeNull();
+  expect(b.queryByRole("button", { name: "Gespeicherte Daten löschen" })).toBeNull();
+});
+
+test("„Gespeicherte Daten löschen“ fragt nach, löscht und bestätigt; Fehler wird gemeldet", async () => {
+  loescheDaten.mockResolvedValueOnce({ error: { code: "42501" } }).mockResolvedValueOnce({ error: null });
+  render(<DatenLoeschen art="B" />);
+  fireEvent.click(screen.getByRole("button", { name: "Gespeicherte Daten löschen" }));
+  expect(loescheDaten).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Ja, löschen" }));
+  expect((await screen.findByRole("alert")).textContent).toMatch(/nicht geklappt/);
+  fireEvent.click(screen.getByRole("button", { name: "Ja, löschen" }));
+  expect((await screen.findByRole("status")).textContent).toMatch(/gelöscht/);
+  expect(loescheDaten).toHaveBeenCalledWith(expect.anything(), "B");
 });
 
 test("Lesefehler wird nicht als „nicht erteilt“ angezeigt", async () => {
