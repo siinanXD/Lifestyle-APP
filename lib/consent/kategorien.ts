@@ -6,11 +6,23 @@ type Client = ReturnType<typeof createClient>;
 
 // Welche Tabelle gehört zu welcher Einwilligung (docs/PRIVACY.md, Abschnitt 2 und 3).
 // Jede Tabelle aus supabase/migrations steht hier genau einmal; tests/consent/kategorien.test.ts schlägt bei neuen Tabellen an.
-// Reihenfolge = Löschreihenfolge (Sätze vor Trainings, Planeinträge vor Plänen).
+// Reihenfolge = Löschreihenfolge (Sätze vor Trainings, Planeinträge vor Plänen, Häkchen vor Gewohnheiten).
 // immer: Konto und Einwilligungsnachweis, bleiben bis zur Kontolöschung. referenz: ohne Nutzerbezug.
 export const TABELLEN = {
-  A: [],
-  B: ["workout_sets", "workouts", "plan_items", "training_plans", "body_measurements", "health_profile", "water_logs"],
+  A: ["habit_checks", "habits"],
+  B: [
+    "workout_sets",
+    "workouts",
+    "plan_items",
+    "training_plans",
+    "activity_logs",
+    "comeback_checkins",
+    "sleep_logs",
+    "meals",
+    "body_measurements",
+    "health_profile",
+    "water_logs",
+  ],
   C: [],
   D: [],
   E: [],
@@ -18,7 +30,7 @@ export const TABELLEN = {
   referenz: ["exercises"],
 } as const satisfies Record<Art | "immer" | "referenz", readonly string[]>;
 
-// A betrifft Spalten der Profilzeile, keine eigene Tabelle: Widerruf mit Löschen setzt sie auf die Defaults zurück.
+// A betrifft außerdem Spalten der Profilzeile: Widerruf mit Löschen setzt sie auf die Defaults zurück.
 export const PROFILANGABEN_A = {
   goals: [],
   goal_note: null,
@@ -28,7 +40,7 @@ export const PROFILANGABEN_A = {
   equipment: [],
 };
 
-export const hatDaten = (art: Art) => art === "A" || TABELLEN[art].length > 0;
+export const hatDaten = (art: Art) => art === "A" || (TABELLEN[art] as readonly string[]).length > 0;
 
 // Läuft im Browser mit der Sitzung der Person; RLS lässt Löschen nur für eigene Zeilen zu (auch ohne B).
 // Erst löschen, dann widerrufen: Scheitert das Löschen, bleibt alles wie es war und die Person kann es erneut versuchen.

@@ -20,7 +20,7 @@ describe("Zuordnung Tabelle → Einwilligung", () => {
   });
 
   test("Gesundheitsdaten-Tabellen gehören zu B", () => {
-    expect(TABELLEN.B).toEqual(expect.arrayContaining(["health_profile", "workouts", "workout_sets", "water_logs", "body_measurements", "training_plans", "plan_items"]));
+    expect(TABELLEN.B).toEqual(expect.arrayContaining(["health_profile", "workouts", "workout_sets", "water_logs", "body_measurements", "training_plans", "plan_items", "activity_logs", "comeback_checkins", "sleep_logs", "meals"]));
   });
 
   test("A setzt nur Profilangaben zurück, nicht die Kontozeile", () => {
@@ -75,12 +75,12 @@ describe("widerrufe", () => {
     expect(aufrufe.findLastIndex((a) => a.methode === "delete")).toBeLessThan(aufrufe.findIndex((a) => a.methode === "update"));
   });
 
-  test("A mit „Daten löschen“ setzt die Profilangaben der eigenen Zeile zurück", async () => {
+  test("A mit „Daten löschen“ setzt die Profilangaben der eigenen Zeile zurück und löscht die Gewohnheiten", async () => {
     const { client, aufrufe } = fake();
     await widerrufe(client, "A", { datenLoeschen: true });
     expect(aufrufe).toContainEqual({ tabelle: "profiles", methode: "update", args: [PROFILANGABEN_A] });
     expect(aufrufe).toContainEqual({ tabelle: "profiles", methode: "eq", args: ["id", "u1"] });
-    expect(loeschungen(aufrufe)).toEqual([]);
+    expect(loeschungen(aufrufe)).toEqual(["habit_checks", "habits"]);
     expect(widerruf(aufrufe)).toHaveLength(1);
   });
 
