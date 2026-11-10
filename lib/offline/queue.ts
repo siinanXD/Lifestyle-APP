@@ -29,8 +29,12 @@ export type Senden = (eintrag: Eintrag) => Promise<{ ok: true } | { ok: false; f
 export type Stand = { gesendet: number; offen: number; fehlgeschlagen: number };
 
 export const MAX_VERSUCHE = 10;
-// Annahme: Netz weg oder Sitzung abgelaufen geht vorbei; jeder andere Fehler (RLS, Validierung, 4xx) ist dauerhaft.
-const VORUEBERGEHEND = ["netz", "no_user"];
+// Annahme: Netz weg, Sitzung abgelaufen oder Datenbank kurz nicht erreichbar geht vorbei; jeder andere Fehler (RLS, Validierung, 4xx) ist dauerhaft.
+// "db" ist ein Datenbankfehler ohne Code aus lib/training/log.ts: unbekannt, also lieber begrenzt wiederholen als verwerfen.
+const VORUEBERGEHEND = ["netz", "no_user", "db"];
+// PostgREST PGRST000–003 (Verbindung, Schema-Cache, Pool-Timeout); Postgres-Klassen 08 (Verbindung), 40 (Rollback, Deadlock), 53 (Ressourcen), 57 (Abbruch, Start).
+const VORUEBERGEHEND_DB = /^(PGRST00[0-3]|(08|40|53|57)[0-9A-Z]{3})$/;
+const istVoruebergehend = (fehler: string) => VORUEBERGEHEND.includes(fehler) || VORUEBERGEHEND_DB.test(fehler);
 
 /** Abstand vor dem nächsten Versuch: 30 s, 1 min, 2 min, … */
 export const wartezeitMs = (versuche: number) => 30_000 * 2 ** (versuche - 1);
@@ -56,18 +60,21 @@ export async function verarbeite(queue: Speicher, senden: Senden, uhr: () => num
     if (eintrag.naechsterVersuchAb && uhr() < Date.parse(eintrag.naechsterVersuchAb)) break;
     // Nach `leeren()` (Abmelden) mitten im Durchgang darf nichts mehr hinausgehen: nur senden, was noch in der Queue steht.
     if (!(await queue.alle()).some((e) => e.id === eintrag.id)) continue;
-    const fehler = await senden(eintrag).then(
-      // Ohne Code meldet das Supabase-SDK einen abgelehnten fetch: das ist ein Netzfehler, kein dauerhafter.
-      (r) => (r.ok ? null : r.fehler || "netz"),
-      () => "netz",
-    );
+    // Promise.resolve().then: auch ein Wurf, bevor `senden` ein Promise liefert, landet im Netzfehler-Zweig.
+    const fehler = await Promise.resolve()
+      .then(() => senden(eintrag))
+      .then(
+        // Ohne Code meldet das Supabase-SDK einen abgelehnten fetch: das ist ein Netzfehler, kein dauerhafter.
+        (r) => (r.ok ? null : r.fehler || "netz"),
+        () => "netz",
+      );
     if (fehler === null) {
       await queue.entfernen(eintrag.id);
       gesendet++;
       continue;
     }
     const versuche = eintrag.versuche + 1;
-    if (!VORUEBERGEHEND.includes(fehler)) {
+    if (!istVoruebergehend(fehler)) {
       await queue.aktualisieren({ ...eintrag, versuche, fehlgeschlagen: fehler });
       continue;
     }

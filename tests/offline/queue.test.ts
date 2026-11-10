@@ -174,3 +174,32 @@ describe("verarbeite: Review-Befunde", () => {
     expect(a.naechsterVersuchAb).toBe(new Date(JETZT + 60_000 + wartezeitMs(1)).toISOString());
   });
 });
+
+describe("verarbeite: weitere Runde (SIN-1286)", () => {
+  test.each(["PGRST000", "PGRST003", "08006", "40001", "53300", "57P03", "db"])("vorübergehender Datenbankfehler %s wird mit Wartezeit wiederholt", async (code) => {
+    const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2)]);
+    const { senden, gesendet } = sender(() => ({ ok: false, fehler: code }));
+    const stand = await verarbeite(queue, senden, () => JETZT);
+    expect(gesendet).toEqual(["a"]);
+    expect(stand).toEqual({ gesendet: 0, offen: 2, fehlgeschlagen: 0 });
+    expect((await queue.alle()).find((e) => e.id === "a")).toMatchObject({ versuche: 1, naechsterVersuchAb: new Date(JETZT + wartezeitMs(1)).toISOString() });
+  });
+
+  test.each(["42501", "23505", "PGRST116", "ungueltig"])("dauerhafter Fehler %s bleibt dauerhaft", async (code) => {
+    const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2)]);
+    const { senden, gesendet } = sender((e) => (e.id === "a" ? { ok: false, fehler: code } : OK));
+    const stand = await verarbeite(queue, senden, () => JETZT);
+    expect(gesendet).toEqual(["a", "b"]);
+    expect(stand).toEqual({ gesendet: 1, offen: 0, fehlgeschlagen: 1 });
+  });
+
+  test("eine synchron werfende Sendefunktion zählt als Netzfehler mit Versuch und Wartezeit", async () => {
+    const queue = imSpeicher([eintrag("a", 1)]);
+    const senden = (() => {
+      throw new Error("kaputt, bevor ein Promise entsteht");
+    }) as unknown as Senden;
+    const stand = await verarbeite(queue, senden, () => JETZT);
+    expect(stand).toEqual({ gesendet: 0, offen: 1, fehlgeschlagen: 0 });
+    expect((await queue.alle())[0]).toMatchObject({ versuche: 1, naechsterVersuchAb: new Date(JETZT + wartezeitMs(1)).toISOString() });
+  });
+});
