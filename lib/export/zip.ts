@@ -36,6 +36,8 @@ export function baueZip(dateien: ZipDatei[], zeitpunkt: Date = new Date()): Uint
 
   for (const datei of dateien) {
     const name = new TextEncoder().encode(eintragsname(datei.name));
+    // Das Längenfeld hat 16 Bit; ein längerer Name liefe über und ergäbe ein kaputtes Archiv.
+    if (name.length > 0xffff) throw new Error(`Eintragsname im ZIP zu lang: ${name.length} Bytes`);
     const groesse = datei.inhalt.length;
     const crc = crc32(datei.inhalt);
 

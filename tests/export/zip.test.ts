@@ -71,3 +71,12 @@ describe("baueZip", () => {
     },
   );
 });
+
+describe("baueZip: Namenslänge", () => {
+  test("lehnt Namen ab, deren UTF-8-Länge nicht ins Längenfeld passt", () => {
+    const inhalt = new Uint8Array([1]);
+    expect(() => baueZip([{ name: "a".repeat(65536), inhalt }])).toThrow(/zu lang/);
+    expect(() => baueZip([{ name: "ä".repeat(32768), inhalt }])).toThrow(/zu lang/);
+    expect(baueZip([{ name: "a".repeat(65535), inhalt }]).length).toBeGreaterThan(65535 * 2);
+  });
+});

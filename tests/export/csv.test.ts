@@ -34,3 +34,13 @@ describe("alsCsv", () => {
     expect(alsCsv([{ a: null, c: { x: 1 } }], ["a", "b", "c"])).toBe(`${BOM}a;b;c\r\n;;"{""x"":1}"\r\n`);
   });
 });
+
+describe("alsCsv: Formelschutz", () => {
+  test("entschärft Formeln auch hinter führenden Steuer- und Leerzeichen", () => {
+    const csv = alsCsv([{ a: "\t=1+1", b: "\r@SUM(A1)", c: " +49 30", d: "ruhig", e: -5 }], ["a", "b", "c", "d", "e"]);
+    const zeile = csv.split("\r\n")[1];
+    expect(zeile.startsWith("'\t=1+1;")).toBe(true);
+    expect(zeile).toContain("\"'\r@SUM(A1)\"");
+    expect(zeile).toContain(";' +49 30;ruhig;-5");
+  });
+});

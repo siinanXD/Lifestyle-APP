@@ -4,7 +4,8 @@ function zelle(wert: unknown): string {
   if (wert === null || wert === undefined) return "";
   let text = typeof wert === "object" ? JSON.stringify(wert) : String(wert);
   // Formel-Einschleusung: nur Texte entschärfen, damit negative Zahlen Zahlen bleiben.
-  if (typeof wert === "string" && /^[=+\-@]/.test(text)) text = `'${text}`;
+  // Auch hinter führenden Steuer- und Leerzeichen (Tab, CR): Tabellenprogramme überlesen sie.
+  if (typeof wert === "string" && /^[\u0000- ]*[=+\-@]/.test(text)) text = `'${text}`;
   return /[";,\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
