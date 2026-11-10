@@ -203,3 +203,30 @@ describe("verarbeite: weitere Runde (SIN-1286)", () => {
     expect((await queue.alle())[0]).toMatchObject({ versuche: 1, naechsterVersuchAb: new Date(JETZT + wartezeitMs(1)).toISOString() });
   });
 });
+
+describe("verarbeite: Eintrag wird während des Durchgangs ersetzt", () => {
+  test("sendet den aktuellen Stand und verliert eine spätere Änderung nicht", async () => {
+    const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2, { daten: { wdh: 5 } })]);
+    const gesehen: unknown[] = [];
+    const senden: Senden = async (e) => {
+      gesehen.push([e.id, e.daten]);
+      // Während "a" unterwegs ist, korrigiert die Person "b" (gleiche id, neuer Inhalt).
+      if (e.id === "a") await queue.hinzufuegen(eintrag("b", 2, { daten: { wdh: 12 } }));
+      return OK;
+    };
+    const stand = await verarbeite(queue, senden, () => JETZT);
+    expect(gesehen).toEqual([["a", { satzNr: 1 }], ["b", { wdh: 12 }]]);
+    expect(stand).toEqual({ gesendet: 2, offen: 0, fehlgeschlagen: 0 });
+  });
+
+  test("ändert sich der Eintrag, während er selbst gesendet wird, bleibt die neue Fassung in der Queue", async () => {
+    const queue = imSpeicher([eintrag("b", 2, { daten: { wdh: 5 } })]);
+    const senden: Senden = async () => {
+      await queue.hinzufuegen(eintrag("b", 2, { daten: { wdh: 12 } }));
+      return OK;
+    };
+    const stand = await verarbeite(queue, senden, () => JETZT);
+    expect(stand).toEqual({ gesendet: 1, offen: 1, fehlgeschlagen: 0 });
+    expect((await queue.alle())[0].daten).toEqual({ wdh: 12 });
+  });
+});
