@@ -279,8 +279,16 @@ a {
   cursor: pointer;
 }
 
+/* Chips als Links (Filter in der Übungsbibliothek, SIN-1268). */
+a.chip {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 /* Gewählt: Farbe und Rahmen, nicht Farbe allein. */
-.chip[aria-pressed="true"] {
+.chip[aria-pressed="true"],
+.chip[aria-current="true"] {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--color-on-primary);
@@ -401,6 +409,12 @@ a {
 .sets li > .muted {
   grid-column: 1 / -1;
   font-size: 0.875rem;
+}
+
+/* Übungsbibliothek (SIN-1268): Name als Zeilenkopf in der Liste. */
+.uebung-name {
+  margin: 0;
+  font-size: var(--font-base);
 }
 
 /* Wasser (SIN-1289): Tagessumme groß, Verlauf als einfache Balken ohne Wertung. */
