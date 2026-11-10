@@ -8,6 +8,9 @@ export default function AccountPage() {
       <a href="/passwort-neu" className="link">
         Passwort ändern
       </a>
+      <Link href="/konto/einwilligungen" className="link">
+        Einwilligungen
+      </Link>
       <section className="danger-zone stack">
         <h2>Konto löschen</h2>
         <p>

@@ -1,0 +1,51 @@
+import type { createClient } from "../supabase/client";
+import { widerrufeEinwilligung } from "./consent";
+import type { Art } from "./texte";
+
+type Client = ReturnType<typeof createClient>;
+
+// Welche Tabelle gehört zu welcher Einwilligung (docs/PRIVACY.md, Abschnitt 2 und 3).
+// Jede Tabelle aus supabase/migrations steht hier genau einmal; tests/consent/kategorien.test.ts schlägt bei neuen Tabellen an.
+// Reihenfolge = Löschreihenfolge (Sätze vor Trainings, Planeinträge vor Plänen).
+// immer: Konto und Einwilligungsnachweis, bleiben bis zur Kontolöschung. referenz: ohne Nutzerbezug.
+export const TABELLEN = {
+  A: [],
+  B: ["workout_sets", "workouts", "plan_items", "training_plans", "body_measurements", "health_profile", "water_logs"],
+  C: [],
+  D: [],
+  E: [],
+  immer: ["profiles", "consents"],
+  referenz: ["exercises"],
+} as const satisfies Record<Art | "immer" | "referenz", readonly string[]>;
+
+// A betrifft Spalten der Profilzeile, keine eigene Tabelle: Widerruf mit Löschen setzt sie auf die Defaults zurück.
+export const PROFILANGABEN_A = {
+  goals: [],
+  goal_note: null,
+  days_per_week: null,
+  minutes_per_session: null,
+  experience: null,
+  equipment: [],
+};
+
+export const hatDaten = (art: Art) => art === "A" || TABELLEN[art].length > 0;
+
+// Läuft im Browser mit der Sitzung der Person; RLS lässt Löschen nur für eigene Zeilen zu (auch ohne B).
+// Erst löschen, dann widerrufen: Scheitert das Löschen, bleibt alles wie es war und die Person kann es erneut versuchen.
+export async function widerrufe(supabase: Client, art: Art, { datenLoeschen }: { datenLoeschen: boolean }) {
+  const { data } = await supabase.auth.getUser();
+  const id = data.user?.id;
+  if (!id) return { error: { code: "no_user" } };
+  if (datenLoeschen) {
+    if (art === "A") {
+      const { error } = await supabase.from("profiles").update(PROFILANGABEN_A).eq("id", id);
+      if (error) return { error };
+    }
+    for (const tabelle of TABELLEN[art]) {
+      const { error } = await supabase.from(tabelle).delete().eq("user_id", id);
+      if (error) return { error };
+    }
+  }
+  const { error } = await widerrufeEinwilligung(supabase, art);
+  return { error };
+}
