@@ -53,6 +53,8 @@ export async function verarbeite(queue: Speicher, senden: Senden, jetzt = Date.n
   for (const eintrag of offen) {
     // Wartet der vorderste Eintrag noch, wartet auch der Rest, sonst kippt die Reihenfolge.
     if (eintrag.naechsterVersuchAb && jetzt < Date.parse(eintrag.naechsterVersuchAb)) break;
+    // Nach `leeren()` (Abmelden) mitten im Durchgang darf nichts mehr hinausgehen: nur senden, was noch in der Queue steht.
+    if (!(await queue.alle()).some((e) => e.id === eintrag.id)) continue;
     const fehler = await senden(eintrag).then(
       (r) => (r.ok ? null : r.fehler),
       () => "netz",

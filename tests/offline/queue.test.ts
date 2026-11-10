@@ -135,3 +135,16 @@ describe("neuerEintrag", () => {
     expect(a.erstelltAm < b.erstelltAm && b.erstelltAm < c.erstelltAm).toBe(true);
   });
 });
+
+describe("verarbeite nach leeren()", () => {
+  test("sendet nach dem Abmelden mitten im Durchgang nichts mehr", async () => {
+    const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2), eintrag("c", 3)]);
+    const { senden, gesendet } = sender(async (e) => {
+      if (e.id === "a") await queue.leeren(); // Abmelden, während "a" unterwegs ist
+      return OK;
+    });
+    const stand = await verarbeite(queue, senden, JETZT);
+    expect(gesendet).toEqual(["a"]);
+    expect(stand).toEqual({ gesendet: 1, offen: 0, fehlgeschlagen: 0 });
+  });
+});
