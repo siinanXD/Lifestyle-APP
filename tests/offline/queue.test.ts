@@ -39,7 +39,7 @@ describe("verarbeite", () => {
   test("sendet in der Reihenfolge von erstelltAm und entfernt Gesendetes", async () => {
     const queue = imSpeicher([eintrag("c", 3), eintrag("a", 1), eintrag("b", 2)]);
     const { senden, gesendet } = sender();
-    const stand = await verarbeite(queue, senden, JETZT);
+    const stand = await verarbeite(queue, senden, () => JETZT);
     expect(gesendet).toEqual(["a", "b", "c"]);
     expect(stand).toEqual({ gesendet: 3, offen: 0, fehlgeschlagen: 0 });
     expect(await queue.alle()).toEqual([]);
@@ -51,7 +51,7 @@ describe("verarbeite", () => {
   ])("Netzfehler (%s) stoppt, der Rest bleibt unangetastet", async (_, netzfehler) => {
     const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2), eintrag("c", 3)]);
     const { senden, gesendet } = sender((e) => (e.id === "b" ? netzfehler() : OK));
-    const stand = await verarbeite(queue, senden, JETZT);
+    const stand = await verarbeite(queue, senden, () => JETZT);
     expect(gesendet).toEqual(["a", "b"]);
     expect(stand).toEqual({ gesendet: 1, offen: 2, fehlgeschlagen: 0 });
     const rest = await queue.alle();
@@ -61,25 +61,25 @@ describe("verarbeite", () => {
 
   test("dauerhafter Fehler (4xx: RLS, Validierung) wandert in fehlgeschlagen, die übrigen laufen weiter", async () => {
     const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2)]);
-    const stand = await verarbeite(queue, sender((e) => (e.id === "a" ? { ok: false, fehler: "42501" } : OK)).senden, JETZT);
+    const stand = await verarbeite(queue, sender((e) => (e.id === "a" ? { ok: false, fehler: "42501" } : OK)).senden, () => JETZT);
     expect(stand).toEqual({ gesendet: 1, offen: 0, fehlgeschlagen: 1 });
     expect(await queue.alle()).toEqual([{ ...eintrag("a", 1), versuche: 1, fehlgeschlagen: "42501" }]);
 
     // Fehlgeschlagenes wird nicht endlos wiederholt.
     const { senden, gesendet } = sender();
-    await verarbeite(queue, senden, JETZT);
+    await verarbeite(queue, senden, () => JETZT);
     expect(gesendet).toEqual([]);
   });
 
   test("Wiederholung nach Netzfehler: erst nach der Wartezeit, nach Erfolg entfernt", async () => {
     const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2)]);
-    await verarbeite(queue, async () => NETZ, JETZT);
+    await verarbeite(queue, async () => NETZ, () => JETZT);
 
     const { senden, gesendet } = sender();
-    await verarbeite(queue, senden, JETZT + wartezeitMs(1) - 1);
+    await verarbeite(queue, senden, () => JETZT + wartezeitMs(1) - 1);
     expect(gesendet).toEqual([]); // zu früh: auch "b" wartet, damit die Reihenfolge bleibt
 
-    expect(await verarbeite(queue, senden, JETZT + wartezeitMs(1))).toEqual({ gesendet: 2, offen: 0, fehlgeschlagen: 0 });
+    expect(await verarbeite(queue, senden, () => JETZT + wartezeitMs(1))).toEqual({ gesendet: 2, offen: 0, fehlgeschlagen: 0 });
     expect(gesendet).toEqual(["a", "b"]);
   });
 
@@ -92,7 +92,7 @@ describe("verarbeite", () => {
     let jetzt = JETZT;
     const { senden, gesendet } = sender(() => NETZ);
     for (let i = 0; i < MAX_VERSUCHE + 3; i++) {
-      await verarbeite(queue, senden, jetzt);
+      await verarbeite(queue, senden, () => jetzt);
       jetzt += wartezeitMs(MAX_VERSUCHE);
     }
     expect(gesendet).toHaveLength(MAX_VERSUCHE);
@@ -105,16 +105,16 @@ describe("verarbeite", () => {
     const server = new Map<string, unknown>(); // Upsert auf id, wie es SIN-1287 serverseitig verlangt
     const { senden } = sender((e) => (server.set(e.id, e.daten), OK));
 
-    await expect(verarbeite(abstuerzend, senden, JETZT)).rejects.toThrow("Absturz");
+    await expect(verarbeite(abstuerzend, senden, () => JETZT)).rejects.toThrow("Absturz");
     expect(await speicher.alle()).toEqual([eintrag("a", 1)]);
 
-    expect(await verarbeite(speicher, senden, JETZT)).toEqual({ gesendet: 1, offen: 0, fehlgeschlagen: 0 });
+    expect(await verarbeite(speicher, senden, () => JETZT)).toEqual({ gesendet: 1, offen: 0, fehlgeschlagen: 0 });
     expect([...server]).toEqual([["a", { satzNr: 1 }]]);
   });
 
   test("ein während des Sendens geleerter Speicher (Abmelden) bleibt leer", async () => {
     const queue = imSpeicher([eintrag("a", 1)]);
-    await verarbeite(queue, sender(() => queue.leeren().then(() => NETZ)).senden, JETZT);
+    await verarbeite(queue, sender(() => queue.leeren().then(() => NETZ)).senden, () => JETZT);
     expect(await queue.alle()).toEqual([]);
   });
 
@@ -122,7 +122,7 @@ describe("verarbeite", () => {
     const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2, { fehlgeschlagen: "42501" })]);
     await queue.leeren();
     expect(await queue.alle()).toEqual([]);
-    expect(await verarbeite(queue, sender().senden, JETZT)).toEqual({ gesendet: 0, offen: 0, fehlgeschlagen: 0 });
+    expect(await verarbeite(queue, sender().senden, () => JETZT)).toEqual({ gesendet: 0, offen: 0, fehlgeschlagen: 0 });
   });
 });
 
@@ -143,8 +143,34 @@ describe("verarbeite nach leeren()", () => {
       if (e.id === "a") await queue.leeren(); // Abmelden, während "a" unterwegs ist
       return OK;
     });
-    const stand = await verarbeite(queue, senden, JETZT);
+    const stand = await verarbeite(queue, senden, () => JETZT);
     expect(gesendet).toEqual(["a"]);
     expect(stand).toEqual({ gesendet: 1, offen: 0, fehlgeschlagen: 0 });
+  });
+});
+
+describe("verarbeite: Review-Befunde", () => {
+  test("ein Fehler ohne Code (abgelehnter fetch aus dem Supabase-SDK) zählt als Netzfehler mit Wartezeit", async () => {
+    const queue = imSpeicher([eintrag("a", 1), eintrag("b", 2)]);
+    const { senden, gesendet } = sender(() => ({ ok: false, fehler: "" }));
+    const stand = await verarbeite(queue, senden, () => JETZT);
+    expect(gesendet).toEqual(["a"]); // Netz weg: der Rest bleibt unangetastet
+    expect(stand).toEqual({ gesendet: 0, offen: 2, fehlgeschlagen: 0 });
+    const a = (await queue.alle()).find((e) => e.id === "a")!;
+    expect(a).toMatchObject({ versuche: 1, naechsterVersuchAb: new Date(JETZT + wartezeitMs(1)).toISOString() });
+    await verarbeite(queue, senden, () => JETZT + 1000); // innerhalb der Wartezeit: kein neuer Versuch
+    expect(gesendet).toEqual(["a"]);
+  });
+
+  test("die Wartezeit beginnt beim Fehlschlag, nicht beim Start des Durchgangs", async () => {
+    const queue = imSpeicher([eintrag("a", 1)]);
+    let zeit = JETZT;
+    const { senden } = sender(() => {
+      zeit += 60_000; // die Anfrage hängt eine Minute, bevor sie scheitert
+      return NETZ;
+    });
+    await verarbeite(queue, senden, () => zeit);
+    const a = (await queue.alle())[0];
+    expect(a.naechsterVersuchAb).toBe(new Date(JETZT + 60_000 + wartezeitMs(1)).toISOString());
   });
 });

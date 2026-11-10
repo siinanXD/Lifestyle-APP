@@ -46,17 +46,19 @@ export function neuerEintrag(art: Art, daten: unknown): Eintrag {
  * Sendet offene Einträge in der Reihenfolge von `erstelltAm`.
  * Erst senden, dann entfernen: Nach einem Absturz dazwischen wird derselbe Eintrag (gleiche `id`) noch einmal gesendet.
  * Nicht parallel aufrufen; der Aufrufer wartet den laufenden Durchgang ab.
+ * `uhr` wird je Eintrag neu gelesen: Eine Anfrage kann länger hängen als die Wartezeit.
  */
-export async function verarbeite(queue: Speicher, senden: Senden, jetzt = Date.now()): Promise<Stand> {
+export async function verarbeite(queue: Speicher, senden: Senden, uhr: () => number = Date.now): Promise<Stand> {
   const offen = (await queue.alle()).filter((e) => !e.fehlgeschlagen).sort((a, b) => a.erstelltAm.localeCompare(b.erstelltAm));
   let gesendet = 0;
   for (const eintrag of offen) {
     // Wartet der vorderste Eintrag noch, wartet auch der Rest, sonst kippt die Reihenfolge.
-    if (eintrag.naechsterVersuchAb && jetzt < Date.parse(eintrag.naechsterVersuchAb)) break;
+    if (eintrag.naechsterVersuchAb && uhr() < Date.parse(eintrag.naechsterVersuchAb)) break;
     // Nach `leeren()` (Abmelden) mitten im Durchgang darf nichts mehr hinausgehen: nur senden, was noch in der Queue steht.
     if (!(await queue.alle()).some((e) => e.id === eintrag.id)) continue;
     const fehler = await senden(eintrag).then(
-      (r) => (r.ok ? null : r.fehler),
+      // Ohne Code meldet das Supabase-SDK einen abgelehnten fetch: das ist ein Netzfehler, kein dauerhafter.
+      (r) => (r.ok ? null : r.fehler || "netz"),
       () => "netz",
     );
     if (fehler === null) {
@@ -72,7 +74,7 @@ export async function verarbeite(queue: Speicher, senden: Senden, jetzt = Date.n
     await queue.aktualisieren(
       versuche >= MAX_VERSUCHE
         ? { ...eintrag, versuche, fehlgeschlagen: fehler }
-        : { ...eintrag, versuche, naechsterVersuchAb: new Date(jetzt + wartezeitMs(versuche)).toISOString() },
+        : { ...eintrag, versuche, naechsterVersuchAb: new Date(uhr() + wartezeitMs(versuche)).toISOString() },
     );
     break; // Netz weg: der Rest bleibt unangetastet
   }
