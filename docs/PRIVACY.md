@@ -69,7 +69,7 @@ Technische Regeln: jede Einwilligung einzeln, nicht vorangekreuzt, mit Zeitstemp
 - Löschung an Dienstleister (KI-Anbieter, falls Daten gespeichert würden) wird in der Dienstleisterliste dokumentiert.
 - Inaktive Konten: Erinnerung nach 12 Monaten, Löschung nach weiteren 30 Tagen ohne Reaktion (Vorschlag).
 - Beta-Ende: Testpersonen erhalten Export und wahlweise Löschung innerhalb von 30 Tagen nach Beta-Ende; danach werden alle Beta-Daten gelöscht, sofern nicht ausdrücklich weitergenutzt.
-- **Prüfbar:** Ein Test löscht ein Konto und prüft, dass in allen Tabellen des Schemas `lifestyle` und im Objektspeicher kein Datensatz mit dieser Nutzer-ID übrig ist.
+- **Prüfbar:** Ein Test löscht ein Konto und prüft, dass in allen Tabellen des Schemas `lifestyle` und im Objektspeicher kein Datensatz mit dieser Nutzer-ID übrig ist. Für die Datenbank umgesetzt in `supabase/tests/delete_guard.test.sql` (jede Tabelle steht in `delete_own_data()`) und `supabase/tests/delete_own_data.test.sql` (SIN-1253); der Objektspeicher folgt mit dem Fototagebuch.
 
 ## 7. Logging-Regeln
 
