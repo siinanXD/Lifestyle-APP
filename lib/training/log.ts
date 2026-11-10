@@ -32,7 +32,7 @@ export type Workoutzeile = { id: string; started_at: string; ended_at: string | 
 const TAG_MS = 24 * 60 * 60 * 1000;
 const SATZ_SPALTEN = "workout_id, set_no, reps, weight_kg, technique, pain, created_at, workouts(regeneration, started_at)";
 
-async function fuehreAus<T>(anfrage: PromiseLike<{ data: unknown; error: { code?: string } | null }>): Promise<Ergebnis<T>> {
+export async function fuehreAus<T>(anfrage: PromiseLike<{ data: unknown; error: { code?: string } | null }>): Promise<Ergebnis<T>> {
   try {
     const { data, error } = await anfrage;
     return error ? { ok: false, fehler: error.code ?? "db" } : { ok: true, daten: data as T };
@@ -41,7 +41,7 @@ async function fuehreAus<T>(anfrage: PromiseLike<{ data: unknown; error: { code?
   }
 }
 
-async function nutzerId(client: Client) {
+export async function nutzerId(client: Client) {
   try {
     return (await client.auth.getUser()).data.user?.id;
   } catch {

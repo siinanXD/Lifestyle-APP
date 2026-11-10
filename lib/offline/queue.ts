@@ -2,7 +2,7 @@
 // Reine Logik: Der Speicher wird injiziert (IndexedDB im Browser, In-Memory im Test), gesendet wird über eine übergebene Funktion.
 // Die Queue enthält nur Trainingsdaten der angemeldeten Person; `leeren()` löscht alles. Keine Logausgabe der Einträge.
 
-export type Art = "workout_start" | "satz" | "satz_loeschen" | "workout_ende" | "aktivitaet";
+export type Art = "workout_start" | "satz" | "satz_loeschen" | "workout_ende" | "aktivitaet" | "wasser";
 
 export type Eintrag = {
   id: string; // UUID vom Client; der Server schreibt idempotent auf diesen Schlüssel
