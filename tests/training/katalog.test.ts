@@ -50,6 +50,10 @@ describe("filtereUebungen", () => {
     );
   });
 
+  test("Fitnessstudio (Onboarding-Wert „studio“) = alle Geräte vorhanden", () => {
+    expect(filtereUebungen(liste, { geraete: "meine", meineGeraete: ["studio"] })).toEqual(liste);
+  });
+
   test("meine Geräte, aber im Profil keine angegeben = alles", () => {
     expect(filtereUebungen(liste, { geraete: "meine", meineGeraete: [] })).toEqual(liste);
   });

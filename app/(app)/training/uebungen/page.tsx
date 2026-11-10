@@ -46,6 +46,8 @@ export default async function UebungenPage({ searchParams }: { searchParams: Pro
     const { data: auth } = await supabase.auth.getUser();
     if (auth.user) {
       const profil = await supabase.from("profiles").select("equipment").eq("id", auth.user.id).maybeSingle();
+      // Ein Lesefehler ist kein leeres Profil: sonst liefe der Filter still ohne Einschränkung.
+      if (profil.error) throw new Error("Geräte konnten nicht geladen werden");
       meineGeraete = (profil.data as { equipment: string[] } | null)?.equipment ?? [];
     }
   }

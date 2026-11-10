@@ -76,6 +76,12 @@ test("„passend zu meinen Geräten“ nutzt profiles.equipment", async () => {
   expect(db.aufrufe).toContainEqual(["profiles", "eq", ["id", "u1"]]);
 });
 
+test("Lesefehler am Profil wird gemeldet statt ungefiltert anzuzeigen", async () => {
+  db.ergebnisse.exercises = { data: uebungen, error: null };
+  db.ergebnisse.profiles = { data: null, error: { code: "XX000" } };
+  await expect(UebungenPage({ searchParams: Promise.resolve({ geraete: "meine" }) })).rejects.toThrow("Geräte");
+});
+
 test("Suche geht als Parameter an ilike, Platzhalter in der Eingabe werden maskiert", async () => {
   db.ergebnisse.exercises = { data: [uebungen[1]], error: null };
   await zeige({ suche: "50%_rud" });

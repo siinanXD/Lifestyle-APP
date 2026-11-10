@@ -6,7 +6,7 @@ export type Filter = {
   muskel?: string;
   geraete?: "ohne" | "meine";
   suche?: string;
-  /** Aus profiles.equipment; leer oder fehlend = keine Einschränkung. */
+  /** Aus profiles.equipment; leer oder fehlend = keine Einschränkung, „studio“ = alle Geräte (wie lib/training/plan.ts). */
   meineGeraete?: string[];
 };
 
@@ -41,7 +41,7 @@ export function filtereUebungen<T extends Katalogeintrag>(liste: T[], filter: Fi
       (!filter.kategorie || u.category === filter.kategorie) &&
       (!filter.muskel || u.muscle_groups.includes(filter.muskel)) &&
       (filter.geraete !== "ohne" || u.equipment.length === 0) &&
-      (filter.geraete !== "meine" || meine.size === 0 || u.equipment.every((g) => meine.has(g))) &&
+      (filter.geraete !== "meine" || meine.size === 0 || meine.has("studio") || u.equipment.every((g) => meine.has(g))) &&
       (!suche || u.name.toLocaleLowerCase("de-DE").includes(suche)),
   );
 }
