@@ -43,21 +43,26 @@ export const PROFILANGABEN_A = {
 export const hatDaten = (art: Art) => art === "A" || (TABELLEN[art] as readonly string[]).length > 0;
 
 // Läuft im Browser mit der Sitzung der Person; RLS lässt Löschen nur für eigene Zeilen zu (auch ohne B).
-// Erst löschen, dann widerrufen: Scheitert das Löschen, bleibt alles wie es war und die Person kann es erneut versuchen.
+// Erst widerrufen, dann löschen: Ab dem Widerruf lehnen Datenbank und Datenschicht neue Einträge der Kategorie ab.
+// Sonst könnte ein zweites offenes Fenster nach dem Leeren einer Tabelle noch etwas anlegen, das stehen bleibt.
+// Scheitert das Löschen, meldet `widerrufen: true` den Zwischenstand; ein neuer Aufruf löscht den Rest (Löschen geht ohne Einwilligung).
+// shortcut: zwei getrennte Anfragen, ein Schreibzugriff genau zwischen Widerruf und Löschen kann in Millisekunden durchrutschen;
+// bei Bedarf als Datenbankfunktion mit Sperre auf der Einwilligungszeile neu bauen.
 export async function widerrufe(supabase: Client, art: Art, { datenLoeschen }: { datenLoeschen: boolean }) {
   const { data } = await supabase.auth.getUser();
   const id = data.user?.id;
-  if (!id) return { error: { code: "no_user" } };
+  if (!id) return { error: { code: "no_user" }, widerrufen: false };
+  const { error: widerrufFehler } = await widerrufeEinwilligung(supabase, art);
+  if (widerrufFehler) return { error: widerrufFehler, widerrufen: false };
   if (datenLoeschen) {
     if (art === "A") {
       const { error } = await supabase.from("profiles").update(PROFILANGABEN_A).eq("id", id);
-      if (error) return { error };
+      if (error) return { error, widerrufen: true };
     }
     for (const tabelle of TABELLEN[art]) {
       const { error } = await supabase.from(tabelle).delete().eq("user_id", id);
-      if (error) return { error };
+      if (error) return { error, widerrufen: true };
     }
   }
-  const { error } = await widerrufeEinwilligung(supabase, art);
-  return { error };
+  return { error: null, widerrufen: true };
 }

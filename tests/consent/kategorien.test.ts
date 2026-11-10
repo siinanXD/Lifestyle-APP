@@ -59,20 +59,22 @@ const widerruf = (aufrufe: ReturnType<typeof fake>["aufrufe"]) =>
 describe("widerrufe", () => {
   test("ohne „Daten löschen“: nur der Widerruf, Daten bleiben", async () => {
     const { client, aufrufe } = fake();
-    expect(await widerrufe(client, "B", { datenLoeschen: false })).toEqual({ error: null });
+    expect(await widerrufe(client, "B", { datenLoeschen: false })).toEqual({ error: null, widerrufen: true });
     expect(loeschungen(aufrufe)).toEqual([]);
     expect(widerruf(aufrufe)).toHaveLength(1);
     expect(aufrufe).toContainEqual({ tabelle: "consents", methode: "eq", args: ["kind", "B"] });
   });
 
-  test("mit „Daten löschen“: alle B-Tabellen der eigenen Person, Sätze vor Trainings, dann der Widerruf", async () => {
+  test("mit „Daten löschen“: erst der Widerruf, dann alle B-Tabellen der eigenen Person, Sätze vor Trainings", async () => {
     const { client, aufrufe } = fake();
-    expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: null });
+    expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: null, widerrufen: true });
     expect(loeschungen(aufrufe)).toEqual(TABELLEN.B);
     expect(TABELLEN.B.indexOf("workout_sets")).toBeLessThan(TABELLEN.B.indexOf("workouts"));
     expect(TABELLEN.B.indexOf("plan_items")).toBeLessThan(TABELLEN.B.indexOf("training_plans"));
     for (const t of TABELLEN.B) expect(aufrufe).toContainEqual({ tabelle: t, methode: "eq", args: ["user_id", "u1"] });
-    expect(aufrufe.findLastIndex((a) => a.methode === "delete")).toBeLessThan(aufrufe.findIndex((a) => a.methode === "update"));
+    // Regression: Ein zweites Fenster darf nach dem Leeren von workouts kein Training mehr starten können.
+    // Dafür muss der Widerruf vor dem ersten Löschen stehen (die Datenbank lehnt Schreiben ohne offene Einwilligung B ab).
+    expect(aufrufe.findIndex((a) => a.tabelle === "consents" && a.methode === "update")).toBeLessThan(aufrufe.findIndex((a) => a.methode === "delete"));
   });
 
   test("A mit „Daten löschen“ setzt die Profilangaben der eigenen Zeile zurück und löscht die Gewohnheiten", async () => {
@@ -84,15 +86,22 @@ describe("widerrufe", () => {
     expect(widerruf(aufrufe)).toHaveLength(1);
   });
 
-  test("schlägt das Löschen fehl, wird nicht widerrufen", async () => {
+  test("schlägt das Löschen fehl, ist widerrufen und der Zwischenstand wird gemeldet", async () => {
     const { client, aufrufe } = fake({ fehlerBei: "workouts" });
-    expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: { code: "42501" } });
-    expect(widerruf(aufrufe)).toHaveLength(0);
+    expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: { code: "42501" }, widerrufen: true });
+    expect(widerruf(aufrufe)).toHaveLength(1);
+    expect(loeschungen(aufrufe)).toEqual(["workout_sets", "workouts"]);
+  });
+
+  test("schlägt der Widerruf fehl, wird nichts gelöscht", async () => {
+    const { client, aufrufe } = fake({ fehlerBei: "consents" });
+    expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: { code: "42501" }, widerrufen: false });
+    expect(loeschungen(aufrufe)).toEqual([]);
   });
 
   test("ohne Anmeldung passiert nichts", async () => {
     const { client, aufrufe } = fake({ user: null });
-    expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: { code: "no_user" } });
+    expect(await widerrufe(client, "B", { datenLoeschen: true })).toEqual({ error: { code: "no_user" }, widerrufen: false });
     expect(aufrufe).toEqual([]);
   });
 });

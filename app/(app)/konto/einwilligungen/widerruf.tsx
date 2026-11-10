@@ -16,9 +16,15 @@ export function Widerruf({ art }: { art: Art }) {
   async function bestaetigen() {
     setBusy(true);
     setFehler("");
-    const { error } = await widerrufe(createClient(), art, { datenLoeschen: hatDaten(art) && loeschen });
+    const { error, widerrufen } = await widerrufe(createClient(), art, { datenLoeschen: hatDaten(art) && loeschen });
     setBusy(false);
-    if (error) return setFehler("Das hat gerade nicht geklappt. Die Einwilligung gilt noch. Bitte versuch es gleich noch einmal.");
+    if (error) {
+      return setFehler(
+        widerrufen
+          ? "Die Einwilligung ist widerrufen, aber die Daten sind noch nicht vollständig gelöscht. Bitte tippe noch einmal auf „Ja, widerrufen“."
+          : "Das hat gerade nicht geklappt. Die Einwilligung gilt noch. Bitte versuch es gleich noch einmal.",
+      );
+    }
     setFragen(false);
     router.refresh();
   }

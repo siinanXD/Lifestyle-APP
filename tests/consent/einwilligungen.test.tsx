@@ -99,3 +99,15 @@ test("Fehler wird ruhig gemeldet, nichts neu geladen", async () => {
   expect((await screen.findByRole("alert")).textContent).toMatch(/nicht geklappt/);
   expect(refresh).not.toHaveBeenCalled();
 });
+
+test("Löschen nach dem Widerruf gescheitert: Meldung nennt den Zwischenstand, erneutes Tippen versucht es noch einmal", async () => {
+  widerrufe.mockResolvedValueOnce({ error: { code: "42501" }, widerrufen: true }).mockResolvedValueOnce({ error: null, widerrufen: true });
+  render(<Widerruf art="B" />);
+  fireEvent.click(screen.getByRole("button", { name: "Widerrufen" }));
+  fireEvent.click(screen.getByRole("button", { name: "Ja, widerrufen" }));
+  expect((await screen.findByRole("alert")).textContent).toMatch(/ist widerrufen.*noch nicht vollständig gelöscht/);
+  expect(refresh).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Ja, widerrufen" }));
+  await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+  expect(widerrufe).toHaveBeenCalledTimes(2);
+});
