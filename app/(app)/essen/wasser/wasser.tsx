@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useReducer, useState, useSyncExternalStore } from "react";
 import {
   gleicherTag,
   istGueltigeMenge,
@@ -32,6 +32,29 @@ export function Wasser({ eintraege: start }: { eintraege: Wassereintrag[] }) {
   const [menge, setMenge] = useState("");
   const [fehler, setFehler] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Tageswechsel: bei offener Seite um Mitternacht und beim Wiederaktivieren der PWA neu rechnen.
+  const [, neuRechnen] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const planen = () => {
+      const d = new Date();
+      const bisMitternacht = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() - d.getTime();
+      timer = setTimeout(() => {
+        neuRechnen();
+        planen();
+      }, bisMitternacht + 1000);
+    };
+    const sichtbar = () => {
+      if (document.visibilityState === "visible") neuRechnen();
+    };
+    planen();
+    document.addEventListener("visibilitychange", sichtbar);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", sichtbar);
+    };
+  }, []);
 
   async function eintragen(wert: number) {
     if (!istGueltigeMenge(wert)) return setFehler(`Bitte gib die Menge als ganze Zahl von ${MENGE_MIN} bis ${MENGE_MAX} ml ein.`);

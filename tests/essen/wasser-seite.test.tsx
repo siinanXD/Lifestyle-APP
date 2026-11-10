@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import WasserPage from "../../app/(app)/essen/wasser/page";
 import { Wasser } from "../../app/(app)/essen/wasser/wasser";
@@ -13,6 +13,7 @@ vi.mock("../../lib/supabase/server", () => ({ createClient: async () => ({}) }))
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 const heute = (h: number, m: number) => {
@@ -97,4 +98,28 @@ test("Löschen entfernt den Eintrag und senkt die Summe", async () => {
 test("Verlauf zeigt die letzten 7 Tage", () => {
   render(<Wasser eintraege={[]} />);
   expect(within(screen.getByRole("list", { name: "Verlauf der letzten 7 Tage" })).getAllByRole("listitem")).toHaveLength(7);
+});
+
+test("offene Seite wechselt um Mitternacht auf den neuen Tag", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2026, 4, 10, 23, 59, 30));
+  render(<Wasser eintraege={[{ id: "a", amount_ml: 500, logged_at: new Date(2026, 4, 10, 23, 0).toISOString() }]} />);
+  expect(summe()).toBe("500 ml");
+  act(() => {
+    vi.advanceTimersByTime(60_000);
+  });
+  expect(summe()).toBe("0 ml");
+  expect(screen.getByText("Heute noch nichts eingetragen.")).toBeTruthy();
+});
+
+test("wieder aktivierte Seite zeigt den neuen Tag", () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 4, 10, 20, 0));
+  render(<Wasser eintraege={[{ id: "a", amount_ml: 500, logged_at: new Date(2026, 4, 10, 19, 0).toISOString() }]} />);
+  expect(summe()).toBe("500 ml");
+  vi.setSystemTime(new Date(2026, 4, 11, 7, 0));
+  act(() => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(summe()).toBe("0 ml");
 });
