@@ -402,3 +402,42 @@ a {
   grid-column: 1 / -1;
   font-size: 0.875rem;
 }
+
+/* Wasser (SIN-1289): Tagessumme groß, Verlauf als einfache Balken ohne Wertung. */
+.wasser-summe {
+  margin: 0;
+  font-size: var(--font-xl);
+  font-weight: 600;
+}
+
+.balken {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.balken li {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 5.5rem;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.balken li > span:last-child {
+  text-align: right;
+}
+
+.balken-spur {
+  height: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.balken-spur > span {
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+}
