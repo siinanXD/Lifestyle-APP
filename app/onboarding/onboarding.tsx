@@ -179,7 +179,7 @@ export function Onboarding({ start }: { start: Start }) {
             </li>
           ))}
         </ul>
-        <button type="button" className="btn" onClick={() => beende("/training")}>
+        <button type="button" className="btn" onClick={() => beende("/training/plan/neu")}>
           Plan erstellen
         </button>
         <button type="button" className="btn" data-variant="neutral" onClick={() => beende("/")}>

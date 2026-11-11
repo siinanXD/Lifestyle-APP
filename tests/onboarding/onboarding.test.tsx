@@ -324,7 +324,7 @@ test("Zusammenfassung zeigt nur Gespeichertes, Übersprungenes als „nicht ange
   expect(zeilen).toContain("Zeit: nicht angegeben");
   expect(zeilen).toContain("Rücksicht: nicht angegeben");
   fireEvent.click(screen.getByRole("button", { name: "Plan erstellen" }));
-  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/training"));
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/training/plan/neu"));
   expect(speichere).toHaveBeenLastCalledWith(expect.anything(), { onboarding_completed_at: expect.any(String) });
 });
 
