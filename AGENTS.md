@@ -1,6 +1,6 @@
 # AGENTS.md (Lifestyle App)
 
-Status: Bau freigegeben, noch kein Code. Quellen: `README.md`, `docs/INFRASTRUCTURE.md`, Linear-Projekt „Lifestyle App“.
+Status: Bau freigegeben, im Bau. Quellen: `README.md`, `docs/INFRASTRUCTURE.md`, Linear-Projekt „Lifestyle App“.
 
 ## Freigabe und Stack (Sinan, 27.10.2026)
 
@@ -20,6 +20,6 @@ Status: Bau freigegeben, noch kein Code. Quellen: `README.md`, `docs/INFRASTRUCT
 7. Vor dem Push: `npm run typecheck` und `npm test` grün; bei Änderungen in `supabase/` auch `supabase test db`.
 8. Vor dem Öffnen oder Pushen eines PRs den Selbstcheck aus `C:\Dev\AI-Workspace\shared-rules\AI_TOOL_RULES.md` („Selbstcheck vor jedem PR“) für den eigenen Diff beantworten; offene Punkte im PR nennen.
 9. Agenten tauschen Ergebnisse als strukturiertes JSON gegen ein Schema aus (`claude -p --output-format json --json-schema …`, `codex exec --output-schema …`), nie als frei zu parsender Text.
-10. Gate (`.github/workflows/gate.yml`, Gate-Code von `siinanXD/leitstand-2` main): Squash-Merge bei grünem `build` und Codex-Review ohne offene Funde. `risk:low` merged bei grünem build ohne Review (nie bei Auth, RLS, Gesundheitsdaten, Secrets oder Zahlungen); dafür `risk:high`. `blockiert` stoppt das Gate. Änderungen unter `.github/` merged Sinan.
+10. Merge (Sinan, 11.11.2026): Das Gate aus `siinanXD/leitstand-2` ist abgeschaltet (Workflow `gate` deaktiviert), Belegprüfung und Codex-Review sind keine Voraussetzung mehr. Ein PR wird per Squash gemerged, sobald der Check `build` für seinen Head grün ist. Die Labels `risk:low` und `risk:high` bleiben als Hinweis im PR: `risk:high` bei Auth, RLS, Gesundheitsdaten, Secrets, Zahlungen und Migrationen. Offene Punkte und alles nicht Getestete stehen im PR-Text unter „Offen“. Änderungen unter `.github/` merged Sinan.
 11. GitHub-/Infisical-Zugang nach `docs/github-zugang.md` in leitstand-2; keine neuen Repo-Tokens erstellen.
 12. Fertig heißt: Der Nutzerweg läuft Ende zu Ende und ist belegt. Merge oder grüner Build allein reicht nicht.
