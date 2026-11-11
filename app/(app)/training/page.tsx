@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { requireConsent } from "../../../lib/consent/require-consent";
 import { createClient } from "../../../lib/supabase/server";
-import { letzteWorkouts } from "../../../lib/training/log";
+import { COMEBACK_AB_TAGEN } from "../../../lib/training/comeback-ablauf";
+import { letzteWorkouts, tageSeitLetzterEinheit } from "../../../lib/training/log";
 import { ladeAktivenPlan, letzterPlantag, naechsterTag } from "../../../lib/training/plan-ablauf";
+import { ComebackKarte } from "./comeback-karte";
 import { TrainingStarten } from "./training-starten";
 
 // Trainingsdaten sind Gesundheitsdaten (Einwilligung B); Seite liest die Sitzung, nie vorab rendern.
@@ -24,7 +26,9 @@ export default async function TrainingPage() {
   // Server- und Browser-Client haben dieselbe Abfrage-API; log.ts ist auf den Browser-Typ geschrieben.
   const workouts = await letzteWorkouts(supabase as never, 5);
   const plan = await ladeAktivenPlan(supabase as never);
-  if (!workouts.ok || !plan.ok) throw new Error("Trainings konnten nicht geladen werden");
+  // Smart Comeback (SIN-1281): Pause seit dem letzten beendeten Training.
+  const pause = await tageSeitLetzterEinheit(supabase as never);
+  if (!workouts.ok || !plan.ok || !pause.ok) throw new Error("Trainings konnten nicht geladen werden");
   // „Heute dran“ (SIN-1285): der Plantag nach dem zuletzt trainierten, ohne Wochentagszwang.
   let heute: { tagNr: number; uebungen: string[] } | undefined;
   if (plan.daten) {
@@ -37,6 +41,7 @@ export default async function TrainingPage() {
   return (
     <main className="page stack">
       <h1>Training</h1>
+      {pause.daten !== null && pause.daten >= COMEBACK_AB_TAGEN && <ComebackKarte tage={pause.daten} />}
       {plan.daten && heute ? (
         <section className="card stack" aria-label="Heute dran">
           <p className="eyebrow">Heute dran</p>

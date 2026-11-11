@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "../../../../../lib/supabase/client";
+import { vergissComeback } from "../../../../../lib/training/comeback-ablauf";
 import { STANDARD_ZIEL } from "../../../../../lib/training/uebungskarte";
 import { ExerciseCard } from "./exercise-card";
 import { beendeWorkout, letzteSaetze, loescheSatz, saetzeDesWorkouts, speichereSatz } from "../../../../../lib/training/log";
@@ -134,6 +135,8 @@ export function Protokoll({
     const r = await beendeWorkout(createClient(), workoutId, regeneration ? { regeneration } : {});
     setBusy(false);
     if (!r.ok) return setFehler("Das hat gerade nicht geklappt. Das Training läuft noch.");
+    // Die Rückkehr nach Pause (SIN-1281) gilt bis zum nächsten beendeten Training.
+    vergissComeback();
     router.push("/training");
     router.refresh();
   }

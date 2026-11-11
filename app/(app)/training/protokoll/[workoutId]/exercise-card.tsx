@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "../../../../../lib/supabase/client";
+import { gemerktesComeback } from "../../../../../lib/training/comeback-ablauf";
 import { muskelText } from "../../../../../lib/training/katalog";
 import type { Ziel } from "../../../../../lib/training/progression";
 import { baueKarte, empfehlungText, gewichtText, ladeFruehereSaetze, OHNE_VERLAUF, type Karte } from "../../../../../lib/training/uebungskarte";
@@ -35,7 +36,8 @@ export function ExerciseCard({
       if (!aktuell) return;
       let neu: Karte | null = null;
       try {
-        if (r.ok) neu = baueKarte(r.daten ?? [], { wdhMin, wdhMax }, stufeKg);
+        // Läuft eine Rückkehr nach Pause (SIN-1281), zählt der sanfte Einstieg statt der Progression.
+        if (r.ok) neu = baueKarte(r.daten ?? [], { wdhMin, wdhMax }, stufeKg, gemerktesComeback());
       } catch {
         neu = null; // unbrauchbare Altdaten sollen das Training nicht blockieren
       }
