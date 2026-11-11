@@ -29,6 +29,7 @@ function startdaten(): Speicher {
         minutes_per_session: 30,
         experience: "anfaenger",
         equipment: ["kurzhanteln"],
+        weight_step_kg: 2.5,
       },
     ],
     consents: (["A", "B"] as const).map((kind) => ({

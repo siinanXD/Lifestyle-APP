@@ -56,6 +56,9 @@ export default async function TrainingPage() {
       <Link href="/training/uebungen" className="link">
         Übungsbibliothek
       </Link>
+      <Link href="/konto/geraete" className="link">
+        Meine Geräte
+      </Link>
       <Link href="/training/verlauf" className="link">
         Verlauf
       </Link>
