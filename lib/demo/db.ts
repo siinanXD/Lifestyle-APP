@@ -82,6 +82,8 @@ function ilike(muster: string) {
 function passt(zeile: Zeile, { m, a }: Op): boolean {
   const [spalte, wert] = a as [string, unknown];
   switch (m) {
+    case "neq":
+      return (zeile[spalte] ?? null) !== wert;
     case "eq":
     case "is":
       return (zeile[spalte] ?? null) === wert;
