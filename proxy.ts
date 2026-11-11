@@ -1,10 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { istDemo } from "./lib/demo/modus";
 import { SUPABASE_SCHEMA, supabaseEnv } from "./lib/supabase/env";
 
 const PUBLIC_PATHS = ["/willkommen", "/login", "/registrieren", "/passwort-vergessen", "/auth/callback"];
 
 export async function proxy(request: NextRequest) {
+  // Demo-Modus (SIN-1623): kein Login, kein Supabase.
+  if (istDemo()) return NextResponse.next({ request });
   const { url, anonKey } = supabaseEnv();
   let response = NextResponse.next({ request });
   const supabase = createServerClient(url, anonKey, {

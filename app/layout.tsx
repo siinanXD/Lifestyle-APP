@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { DEMO_HINWEIS, istDemo } from "../lib/demo/modus";
 import { RegisterServiceWorker } from "./register-sw";
 import "./globals.css";
 
@@ -16,6 +17,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="de">
       <body>
+        {istDemo() && (
+          <p role="note" className="demo-hinweis">
+            {DEMO_HINWEIS}
+          </p>
+        )}
         {children}
         <RegisterServiceWorker />
       </body>
