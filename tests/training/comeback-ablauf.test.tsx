@@ -4,6 +4,7 @@ import TrainingPage from "../../app/(app)/training/page";
 import ProtokollPage from "../../app/(app)/training/protokoll/[workoutId]/page";
 import { fuehreAbfrage, setzeZurueck } from "../../lib/demo/db";
 import { demoServerClient } from "../../lib/demo/server";
+import { setzeQueue } from "../../lib/offline/sync";
 import { bewerteComeback } from "../../lib/training/comeback";
 import { aenderungText, BEFINDEN, gemerktesComeback, GRUENDE, merkeComeback, TEXTE, vergissComeback } from "../../lib/training/comeback-ablauf";
 import { ERKLAERUNGEN } from "../../lib/training/erklaerung";
@@ -26,6 +27,7 @@ function letztesTraining(tage: number) {
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "on");
   setzeZurueck();
+  setzeQueue();
   vergissComeback();
 });
 afterEach(() => {

@@ -65,6 +65,13 @@ export async function trageAktivitaetEin(client: Client, werte: Aktivitaetswerte
   return fuehreAus<Aktivitaetszeile>(client.from("activity_logs").insert({ user_id: userId, ...werte }).select(SPALTEN).single());
 }
 
+/** Mit `id` vom Gerät (Offline-Warteschlange, SIN-1287): Eine Wiederholung trifft dieselbe Zeile, statt eine zweite anzulegen. */
+export async function speichereAktivitaet(client: Client, id: string, werte: Aktivitaetswerte): Promise<Ergebnis<null>> {
+  const userId = await nutzerId(client);
+  if (!userId) return { ok: false, fehler: "no_user" };
+  return fuehreAus<null>(client.from("activity_logs").upsert({ id, user_id: userId, ...werte }, { onConflict: "id" }));
+}
+
 export const loescheAktivitaet = (client: Client, id: string) => fuehreAus<null>(client.from("activity_logs").delete().eq("id", id));
 
 export function letzteAktivitaeten(client: Client, limit: number) {

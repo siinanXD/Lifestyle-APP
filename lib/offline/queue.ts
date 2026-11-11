@@ -8,6 +8,7 @@ export type Eintrag = {
   id: string; // UUID vom Client; der Server schreibt idempotent auf diesen Schlüssel
   art: Art;
   daten: unknown;
+  nutzer?: string; // wem der Eintrag gehört; ein anderes Konto auf demselben Gerät sendet ihn nie (SIN-1287)
   erstelltAm: string; // ISO-Zeit, bestimmt die Sendereihenfolge
   versuche: number;
   naechsterVersuchAb?: string; // ISO-Zeit; vorher wird nicht erneut gesendet

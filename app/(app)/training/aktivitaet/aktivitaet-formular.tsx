@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { HINWEIS_FREITEXT } from "../../../../lib/onboarding/texte";
-import { createClient } from "../../../../lib/supabase/client";
-import { AKTIVITAET_KATEGORIEN, FEHLERTEXTE, mitStrecke, pruefeAktivitaet, trageAktivitaetEin, type Kategorie } from "../../../../lib/training/aktivitaet";
+import { reiheEin, synchronisiere } from "../../../../lib/offline/sync";
+import { AKTIVITAET_KATEGORIEN, FEHLERTEXTE, mitStrecke, pruefeAktivitaet, type Kategorie } from "../../../../lib/training/aktivitaet";
 
+const WARTET = "Auf deinem Gerät gespeichert. Der Eintrag wird gesendet, sobald du wieder online bist.";
 const FEHLER = "Das hat gerade nicht geklappt. Der Eintrag ist nicht gespeichert. Bitte versuch es gleich noch einmal.";
 
 export function AktivitaetFormular({ vorschlaege }: { vorschlaege: { name: string; category: string }[] }) {
@@ -19,16 +20,22 @@ export function AktivitaetFormular({ vorschlaege }: { vorschlaege: { name: strin
   const [notiz, setNotiz] = useState("");
   const [fehler, setFehler] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [gespeichert, setGespeichert] = useState(false);
 
   async function speichern() {
     const pruefung = pruefeAktivitaet({ kategorie, aktivitaet, dauerMin: dauer, streckeKm: strecke, anstrengung, notiz });
     if (!pruefung.ok) return setFehler(pruefung.fehler.map((f) => FEHLERTEXTE[f]));
     setFehler([]);
     setBusy(true);
-    const r = await trageAktivitaetEin(createClient(), pruefung.werte);
-    if (!r.ok) {
-      setBusy(false);
-      return setFehler([FEHLER]);
+    // Zuerst in die Warteschlange (SIN-1287), dann senden. Die id kommt vom Gerät, damit eine Wiederholung nichts verdoppelt.
+    await reiheEin("aktivitaet", { id: crypto.randomUUID(), ...pruefung.werte });
+    const stand = await synchronisiere();
+    setBusy(false);
+    if (stand && stand.fehlgeschlagen > 0) return setFehler([FEHLER]);
+    if (!stand || stand.offen > 0) {
+      // Offline: Der Verlauf lässt sich jetzt nicht laden, der Eintrag bleibt auf dem Gerät.
+      setGespeichert(true);
+      return;
     }
     router.push("/training/verlauf");
     router.refresh();
@@ -84,9 +91,10 @@ export function AktivitaetFormular({ vorschlaege }: { vorschlaege: { name: strin
           {HINWEIS_FREITEXT}
         </p>
       </div>
-      <button type="button" className="btn" disabled={busy} onClick={speichern}>
+      <button type="button" className="btn" disabled={busy || gespeichert} onClick={speichern}>
         Speichern
       </button>
+      {gespeichert && <p role="status">{WARTET}</p>}
       {fehler.length > 0 && (
         <div role="alert" className="error">
           {fehler.map((f) => (
