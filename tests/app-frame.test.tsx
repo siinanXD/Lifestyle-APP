@@ -51,7 +51,8 @@ describe("App-Rahmen (SIN-1254)", () => {
   });
 });
 
-describe.each(["essen", "fortschritt"])("Platzhalter /%s", (route) => {
+// /essen ist seit SIN-1293 eine echte Seite (tests/essen/mahlzeiten.test.tsx).
+describe.each(["fortschritt"])("Platzhalter /%s", (route) => {
   test("zeigt Überschrift und „Bald hier“", async () => {
     const { default: Page } = await import(`../app/(app)/${route}/page.tsx`);
     render(<Page />);

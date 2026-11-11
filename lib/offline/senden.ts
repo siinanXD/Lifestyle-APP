@@ -1,4 +1,5 @@
 import type { createClient } from "../supabase/client";
+import { entferneMahlzeit, schreibeMahlzeit, type Mahlzeitwerte } from "../essen/mahlzeiten";
 import { trageWasserEin } from "../essen/wasser";
 import { speichereAktivitaet, type Aktivitaetswerte } from "../training/aktivitaet";
 import { beendeWorkout, fuehreAus, loescheSatz, nutzerId, speichereSatz, type Ergebnis, type Satz } from "../training/log";
@@ -43,6 +44,12 @@ export function sender(client: Client): Senden {
         const { id, ...werte } = eintrag.daten as AktivitaetEintrag;
         return alsStand(await speichereAktivitaet(client, id, werte));
       }
+      case "mahlzeit": {
+        const { id, ...werte } = eintrag.daten as Mahlzeitwerte & { id: string };
+        return alsStand(await schreibeMahlzeit(client, id, werte));
+      }
+      case "mahlzeit_loeschen":
+        return alsStand(await entferneMahlzeit(client, (eintrag.daten as { id: string }).id));
       case "wasser": {
         const { id, ml } = eintrag.daten as { id: string; ml: number };
         return alsStand(await trageWasserEin(client, ml, { id }));
