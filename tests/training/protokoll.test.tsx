@@ -12,6 +12,8 @@ const log = vi.hoisted(() => ({
   starteWorkout: vi.fn(),
   letzteWorkouts: vi.fn(),
   saetzeDesWorkouts: vi.fn(),
+  // Keine Pause: Smart Comeback hat eigene Tests (tests/training/comeback-ablauf.test.tsx).
+  tageSeitLetzterEinheit: async () => ({ ok: true, daten: null }),
 }));
 const serverClient = vi.hoisted(() => vi.fn(async () => ({})));
 const requireConsent = vi.hoisted(() => vi.fn());

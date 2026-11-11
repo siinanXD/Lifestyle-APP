@@ -1,4 +1,5 @@
 import type { createClient } from "../supabase/client";
+import type { Comeback } from "./comeback";
 import { empfehle, type Empfehlung } from "./empfehlung";
 import { erklaere } from "./erklaerung";
 import { alsEinheiten, fuehreAus, type Ergebnis, type Satzzeile } from "./log";
@@ -34,7 +35,7 @@ export function ladeFruehereSaetze(client: Client, exerciseId: string, ohneWorko
 }
 
 /** Reine Auswertung: Rückblick und Vorschlag aus den früheren Sätzen. */
-export function baueKarte(saetze: Satzzeile[], ziel: Ziel, kleinsteStufeKg: number): Karte {
+export function baueKarte(saetze: Satzzeile[], ziel: Ziel, kleinsteStufeKg: number, comeback?: Comeback | null): Karte {
   if (saetze.length === 0) return { zuletzt: [], empfehlung: null };
   const nachWorkout = new Map<string, Satzzeile[]>();
   for (const s of saetze) nachWorkout.set(s.workout_id, [...(nachWorkout.get(s.workout_id) ?? []), s]);
@@ -47,7 +48,7 @@ export function baueKarte(saetze: Satzzeile[], ziel: Ziel, kleinsteStufeKg: numb
       const gewichte = sortiert.map((s) => (s.weight_kg === null ? null : Number(s.weight_kg)));
       return { workoutId, datum: start(gruppe), gewichtKg: gewichte.every((g) => g === null) ? null : Math.max(...gewichte.map((g) => g ?? 0)), wiederholungen: sortiert.map((s) => s.reps) };
     });
-  return { zuletzt, empfehlung: empfehle({ einheiten: alsEinheiten(saetze), ziel, kleinsteStufeKg }) };
+  return { zuletzt, empfehlung: empfehle({ einheiten: alsEinheiten(saetze), ziel, kleinsteStufeKg, comeback: comeback ?? undefined }) };
 }
 
 const kg = (wert: number) => `${wert.toLocaleString("de-DE")} kg`;
