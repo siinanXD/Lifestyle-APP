@@ -6,7 +6,8 @@ import { createClient } from "../../../../../lib/supabase/client";
 import { vergissComeback } from "../../../../../lib/training/comeback-ablauf";
 import { STANDARD_ZIEL } from "../../../../../lib/training/uebungskarte";
 import { ExerciseCard } from "./exercise-card";
-import { beendeWorkout, letzteSaetze, loescheSatz, saetzeDesWorkouts, speichereSatz } from "../../../../../lib/training/log";
+import { reiheEin, synchronisiere } from "../../../../../lib/offline/sync";
+import { letzteSaetze } from "../../../../../lib/training/log";
 
 type Uebung = { id: string; name: string; muscle_groups?: string[]; technique?: string };
 type Vorgabe = { exercise_id: string; name: string; sets: number; rep_min: number; rep_max: number };
@@ -92,49 +93,45 @@ export function Protokoll({
     if (last !== null && (!Number.isFinite(last) || last < 0 || last > MAX_KG)) {
       return setFehler(`Bitte gib das Gewicht von 0 bis ${MAX_KG} kg ein oder lass es für Körpergewicht leer.`);
     }
-    const naechste = (liste: Zeile[]) => Math.max(0, ...liste.filter((s) => s.exercise_id === uebung).map((s) => s.set_no)) + 1;
-    const client = createClient();
-    const sende = (nr: number) =>
-      speichereSatz(
-        client,
-        { workoutId, exerciseId: uebung, satzNr: nr, wdh: anzahl, gewichtKg: last, technik: wackelig ? "wackelig" : "sauber", schmerz },
-        { nurNeu: true },
-      );
-    let satzNr = naechste(saetze);
+    // Zuerst in die Warteschlange, sofort anzeigen, danach senden (SIN-1287): Der Satz bleibt auch ohne Verbindung erhalten.
+    const satzNr = Math.max(0, ...saetze.filter((s) => s.exercise_id === uebung).map((s) => s.set_no)) + 1;
+    const technik = wackelig ? "wackelig" : "sauber";
     setFehler("");
     setBusy(true);
-    let r = await sende(satzNr);
-    // Nummer schon vergeben (z. B. Satz aus einem zweiten Fenster): Liste neu laden und einmal mit der nächsten Nummer versuchen.
-    if (!r.ok && r.fehler === "23505") {
-      const neu = await saetzeDesWorkouts(client, workoutId);
-      if (neu.ok) {
-        setSaetze(neu.daten);
-        satzNr = naechste(neu.daten);
-        r = await sende(satzNr);
-      }
+    try {
+      await reiheEin("satz", { workoutId, exerciseId: uebung, satzNr, wdh: anzahl, gewichtKg: last, technik, schmerz });
+    } catch {
+      // Der Speicher des Geräts hat den Satz nicht angenommen (z. B. voll oder gesperrt).
+      setBusy(false);
+      return setFehler(FEHLER);
     }
     setBusy(false);
-    if (!r.ok) return setFehler(FEHLER);
     const name = uebungen.find((u) => u.id === uebung)?.name ?? "";
-    setSaetze((s) => [
-      ...s,
-      { exercise_id: uebung, exercises: { name }, set_no: satzNr, reps: anzahl, weight_kg: last, technique: wackelig ? "wackelig" : "sauber", pain: schmerz },
-    ]);
+    setSaetze((s) => [...s, { exercise_id: uebung, exercises: { name }, set_no: satzNr, reps: anzahl, weight_kg: last, technique: technik, pain: schmerz }]);
   }
 
   async function loeschen(z: Zeile) {
     setBusy(true);
-    const r = await loescheSatz(createClient(), { workoutId, exerciseId: z.exercise_id, satzNr: z.set_no });
+    try {
+      await reiheEin("satz_loeschen", { workoutId, exerciseId: z.exercise_id, satzNr: z.set_no });
+    } catch {
+      setBusy(false);
+      return setFehler("Das hat gerade nicht geklappt. Der Satz ist noch da.");
+    }
     setBusy(false);
-    if (!r.ok) return setFehler("Das hat gerade nicht geklappt. Der Satz ist noch da.");
     setSaetze((s) => s.filter((x) => !(x.exercise_id === z.exercise_id && x.set_no === z.set_no)));
   }
 
   async function beende(regeneration?: "gut" | "schlecht") {
     setBusy(true);
-    const r = await beendeWorkout(createClient(), workoutId, regeneration ? { regeneration } : {});
-    setBusy(false);
-    if (!r.ok) return setFehler("Das hat gerade nicht geklappt. Das Training läuft noch.");
+    try {
+      await reiheEin("workout_ende", { id: workoutId, ...(regeneration && { regeneration }) });
+    } catch {
+      setBusy(false);
+      return setFehler("Das hat gerade nicht geklappt. Das Training läuft noch.");
+    }
+    // Einmal abgleichen, damit die Übersicht das beendete Training zeigt; ohne Verbindung holt die Warteschlange es nach.
+    await synchronisiere();
     // Die Rückkehr nach Pause (SIN-1281) gilt bis zum nächsten beendeten Training.
     vergissComeback();
     router.push("/training");

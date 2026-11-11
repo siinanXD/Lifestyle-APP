@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { Protokoll } from "../../app/(app)/training/protokoll/[workoutId]/protokoll";
 import ProtokollPage from "../../app/(app)/training/protokoll/[workoutId]/page";
 import TrainingPage from "../../app/(app)/training/page";
+import { queue, setzeQueue, synchronisiere } from "../../lib/offline/sync";
 
 const log = vi.hoisted(() => ({
   speichereSatz: vi.fn(),
@@ -31,12 +32,15 @@ vi.mock("../../lib/training/plan-ablauf", async (original) => ({
   ladeAktivenPlan: async () => ({ ok: true, daten: null }),
 }));
 vi.mock("../../lib/consent/require-consent", () => ({ requireConsent }));
-vi.mock("../../lib/supabase/client", () => ({ createClient: () => ({}) }));
+// Mit Sitzung: Die Offline-Warteschlange (SIN-1287) sendet nur für angemeldete Personen.
+vi.mock("../../lib/supabase/client", () => ({ createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) } }) }));
 vi.mock("../../lib/supabase/server", () => ({ createClient: serverClient }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await synchronisiere(); // laufenden Durchgang abwarten, dann die Warteschlange leeren
+  setzeQueue();
   vi.clearAllMocks();
 });
 
@@ -83,6 +87,7 @@ test("Satz speichern ruft speichereSatz mit den Werten und zeigt ihn in der List
   tippe("Gewicht (kg)", "20");
   speichern();
   expect(await screen.findByText("Satz 1: 12 Wdh · 20 kg")).toBeTruthy();
+  await vi.waitFor(() => expect(log.speichereSatz).toHaveBeenCalled());
   expect(log.speichereSatz).toHaveBeenCalledWith(expect.anything(), {
     workoutId: "w1",
     exerciseId: "ex-rudern",
@@ -91,10 +96,11 @@ test("Satz speichern ruft speichereSatz mit den Werten und zeigt ihn in der List
     gewichtKg: 20,
     technik: "sauber",
     schmerz: false,
-  }, { nurNeu: true });
+  });
   speichern();
   expect(await screen.findByText("Satz 2: 12 Wdh · 20 kg")).toBeTruthy();
-  expect(log.speichereSatz).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ satzNr: 2 }), { nurNeu: true });
+  await vi.waitFor(() => expect(log.speichereSatz).toHaveBeenCalledTimes(2));
+  expect(log.speichereSatz).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ satzNr: 2 }));
 });
 
 test("leeres Gewicht wird als Körpergewicht gespeichert; Schalter für Technik und Schmerz", async () => {
@@ -106,10 +112,10 @@ test("leeres Gewicht wird als Körpergewicht gespeichert; Schalter für Technik 
   fireEvent.click(screen.getByRole("switch", { name: "Schmerz" }));
   speichern();
   expect(await screen.findByText("Satz 1: 8 Wdh · Körpergewicht · wackelig · Schmerz")).toBeTruthy();
+  await vi.waitFor(() => expect(log.speichereSatz).toHaveBeenCalled());
   expect(log.speichereSatz).toHaveBeenCalledWith(
     expect.anything(),
     expect.objectContaining({ gewichtKg: null, technik: "wackelig", schmerz: true }),
-    { nurNeu: true },
   );
 });
 
@@ -126,14 +132,17 @@ test("negative oder fehlende Werte werden abgelehnt, nichts gespeichert", () => 
   expect(log.speichereSatz).not.toHaveBeenCalled();
 });
 
-test("Speicherfehler: Satz erscheint nicht, ruhige Meldung", async () => {
+test("ohne Verbindung bleibt der Satz in der Anzeige und in der Warteschlange", async () => {
   log.letzteSaetze.mockResolvedValue({ ok: true, daten: [] });
   log.speichereSatz.mockResolvedValue({ ok: false, fehler: "netz" });
   zeige();
   tippe("Wiederholungen", "12");
   speichern();
-  expect((await screen.findByRole("alert")).textContent).toMatch(/nicht gespeichert/);
-  expect(screen.queryByText(/^Satz 1:/)).toBeNull();
+  expect(await screen.findByText("Satz 1: 12 Wdh · Körpergewicht")).toBeTruthy();
+  expect(screen.queryByRole("alert")).toBeNull();
+  await vi.waitFor(() => expect(log.speichereSatz).toHaveBeenCalled());
+  await synchronisiere();
+  expect(await queue().alle()).toMatchObject([{ art: "satz", versuche: 1 }]);
 });
 
 test("Vorbelegung mit dem letzten Gewicht der Übung", async () => {
@@ -152,6 +161,7 @@ test("gespeicherte Sätze vom Server werden angezeigt und lassen sich löschen",
   expect(screen.getByText("Satz 1: 12 Wdh · 20 kg")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Satz 1 Rudern mit Kurzhantel löschen" }));
   await vi.waitFor(() => expect(screen.queryByText("Satz 1: 12 Wdh · 20 kg")).toBeNull());
+  await vi.waitFor(() => expect(log.loescheSatz).toHaveBeenCalled());
   expect(log.loescheSatz).toHaveBeenCalledWith(expect.anything(), { workoutId: "w1", exerciseId: "ex-rudern", satzNr: 1 });
 });
 
@@ -185,7 +195,8 @@ test("Übungswechsel ohne frühere Sätze leert das Gewicht: Satz wird als Körp
   tippe("Wiederholungen", "10");
   speichern();
   expect(await screen.findByText("Satz 1: 10 Wdh · Körpergewicht")).toBeTruthy();
-  expect(log.speichereSatz).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ exerciseId: "ex-liegestuetz", gewichtKg: null }), { nurNeu: true });
+  await vi.waitFor(() => expect(log.speichereSatz).toHaveBeenCalled());
+  expect(log.speichereSatz).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ exerciseId: "ex-liegestuetz", gewichtKg: null }));
 });
 
 test("letzter Satz der Übung mit Körpergewicht: Gewicht bleibt leer", async () => {
@@ -199,19 +210,3 @@ test("letzter Satz der Übung mit Körpergewicht: Gewicht bleibt leer", async ()
   await vi.waitFor(() => expect(gewicht.value).toBe(""));
 });
 
-test("Satz aus einem anderen Fenster wird nicht überschrieben: neu laden, nächste Nummer nehmen", async () => {
-  log.letzteSaetze.mockResolvedValue({ ok: true, daten: [] });
-  log.speichereSatz.mockResolvedValueOnce({ ok: false, fehler: "23505" }).mockResolvedValueOnce({ ok: true, daten: null });
-  log.saetzeDesWorkouts.mockResolvedValue({
-    ok: true,
-    daten: [{ exercise_id: "ex-rudern", exercises: { name: "Rudern mit Kurzhantel" }, set_no: 1, reps: 12, weight_kg: 20, technique: "sauber", pain: false }],
-  });
-  zeige();
-  tippe("Wiederholungen", "8");
-  speichern();
-  expect(await screen.findByText("Satz 2: 8 Wdh · Körpergewicht")).toBeTruthy();
-  expect(screen.getByText("Satz 1: 12 Wdh · 20 kg")).toBeTruthy();
-  expect(log.speichereSatz).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({ satzNr: 1, wdh: 8 }), { nurNeu: true });
-  expect(log.speichereSatz).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({ satzNr: 2, wdh: 8 }), { nurNeu: true });
-  expect(log.saetzeDesWorkouts).toHaveBeenCalledWith(expect.anything(), "w1");
-});

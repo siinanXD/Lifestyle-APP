@@ -5,6 +5,7 @@ import PlanPage from "../../app/(app)/training/plan/page";
 import ProtokollPage from "../../app/(app)/training/protokoll/[workoutId]/page";
 import { fuehreAbfrage, setzeZurueck } from "../../lib/demo/db";
 import { demoServerClient } from "../../lib/demo/server";
+import { setzeQueue } from "../../lib/offline/sync";
 import { erstellePlan } from "../../lib/training/plan";
 import { ladePlanEingabe, speicherePlan } from "../../lib/training/plan-eingabe";
 
@@ -18,6 +19,7 @@ vi.mock("../../lib/supabase/server", () => ({ createClient: async () => demoServ
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "on");
   setzeZurueck();
+  setzeQueue();
 });
 afterEach(() => {
   cleanup();

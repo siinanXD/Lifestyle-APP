@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import AktivitaetPage from "../../app/(app)/training/aktivitaet/page";
 import { fuehreAbfrage, setzeZurueck } from "../../lib/demo/db";
 import { demoServerClient } from "../../lib/demo/server";
+import { setzeQueue } from "../../lib/offline/sync";
 import { pruefeAktivitaet, type Eingabe } from "../../lib/training/aktivitaet";
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
@@ -54,6 +55,7 @@ describe("Seite /training/aktivitaet", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "on");
     setzeZurueck();
+  setzeQueue();
     requireConsent.mockResolvedValue(undefined);
   });
   afterEach(() => {
