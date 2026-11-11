@@ -30,8 +30,28 @@ const MUSKELN: Record<string, string> = {
   trizeps: "Trizeps",
 };
 
+const GERAETE: Record<string, string> = {
+  kurzhanteln: "Kurzhanteln",
+  langhantel: "Langhantel",
+  kabelzug: "Kabelzug",
+  baender: "Bänder",
+  kardio: "Kardiogerät",
+  flachbank: "Flachbank",
+  kniebeugenstaender: "Kniebeugenständer",
+};
+
 export const kategorieText = (k: string) => KATEGORIEN[k] ?? k;
 export const muskelText = (m: string) => MUSKELN[m] ?? m.charAt(0).toUpperCase() + m.slice(1);
+
+export const geraetText = (g: string) => GERAETE[g] ?? g.charAt(0).toUpperCase() + g.slice(1);
+
+/** Varianten einer Übung (SIN-1270): leichter = `variant_of` zeigt auf diese Übung, schwerer = diese zeigt auf die andere. */
+export function varianten<T extends { slug: string; variant_of: string | null }>(uebung: { slug: string; variant_of: string | null }, alle: T[]) {
+  return {
+    leichter: alle.filter((u) => u.variant_of === uebung.slug),
+    schwerer: alle.filter((u) => uebung.variant_of !== null && u.slug === uebung.variant_of),
+  };
+}
 
 export function filtereUebungen<T extends Katalogeintrag>(liste: T[], filter: Filter): T[] {
   const suche = filter.suche?.trim().toLocaleLowerCase("de-DE");

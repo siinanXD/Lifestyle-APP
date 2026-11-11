@@ -35,7 +35,7 @@ function Auswahl({ titel, filter, feld, optionen }: { titel: string; filter: Fil
 export default async function UebungenPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const filter = leseFilter(await searchParams);
   const supabase = await createClient();
-  let abfrage = supabase.from("exercises").select("id, name, category, muscle_groups, equipment");
+  let abfrage = supabase.from("exercises").select("id, slug, name, category, muscle_groups, equipment");
   // Die Eingabe geht als Wert an PostgREST, nie in SQL zusammengesetzt.
   if (filter.suche) abfrage = abfrage.ilike("name", ilikeMuster(filter.suche));
   const { data, error } = await abfrage.order("name");
@@ -52,7 +52,7 @@ export default async function UebungenPage({ searchParams }: { searchParams: Pro
     }
   }
 
-  const alle = data as Katalogeintrag[];
+  const alle = data as (Katalogeintrag & { slug?: string })[];
   const liste = filtereUebungen(alle, { ...filter, meineGeraete });
   const muskeln = [...new Set(alle.flatMap((u) => u.muscle_groups))].sort((a, b) => muskelText(a).localeCompare(muskelText(b), "de"));
 
@@ -78,7 +78,15 @@ export default async function UebungenPage({ searchParams }: { searchParams: Pro
         <ul className="sets" aria-label="Übungen">
           {liste.map((u) => (
             <li key={u.id}>
-              <h2 className="uebung-name">{u.name}</h2>
+              <h2 className="uebung-name">
+                {u.slug ? (
+                  <Link href={`/training/uebungen/${u.slug}`} className="link">
+                    {u.name}
+                  </Link>
+                ) : (
+                  u.name
+                )}
+              </h2>
               <span className="muted">{kategorieText(u.category)}</span>
               <span className="muted">{u.muscle_groups.map(muskelText).join(", ")}</span>
             </li>
