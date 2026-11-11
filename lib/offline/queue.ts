@@ -2,12 +2,13 @@
 // Reine Logik: Der Speicher wird injiziert (IndexedDB im Browser, In-Memory im Test), gesendet wird über eine übergebene Funktion.
 // Die Queue enthält nur Trainingsdaten der angemeldeten Person; `leeren()` löscht alles. Keine Logausgabe der Einträge.
 
-export type Art = "workout_start" | "satz" | "satz_loeschen" | "workout_ende" | "aktivitaet" | "wasser";
+export type Art = "workout_start" | "satz" | "satz_loeschen" | "workout_ende" | "aktivitaet" | "wasser" | "mahlzeit" | "mahlzeit_loeschen";
 
 export type Eintrag = {
   id: string; // UUID vom Client; der Server schreibt idempotent auf diesen Schlüssel
   art: Art;
   daten: unknown;
+  nutzer?: string; // wem der Eintrag gehört; ein anderes Konto auf demselben Gerät sendet ihn nie (SIN-1287)
   erstelltAm: string; // ISO-Zeit, bestimmt die Sendereihenfolge
   versuche: number;
   naechsterVersuchAb?: string; // ISO-Zeit; vorher wird nicht erneut gesendet
