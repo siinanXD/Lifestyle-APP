@@ -53,6 +53,7 @@ const DEFAULTS: Record<string, () => Zeile> = {
   consents: () => ({ granted_at: jetzt(), revoked_at: null }),
   water_logs: () => ({ logged_at: jetzt() }),
   workouts: () => ({ started_at: jetzt(), ended_at: null, regeneration: null, note: null }),
+  activity_logs: () => ({ started_at: jetzt(), distance_km: null, effort: null, note: null }),
   workout_sets: () => ({ technique: "sauber", pain: false, created_at: jetzt() }),
   body_measurements: () => ({ measured_on: jetzt().slice(0, 10) }),
   training_plans: () => ({ source: "regeln", general: false, active: true, created_at: jetzt() }),
@@ -87,6 +88,8 @@ function passt(zeile: Zeile, { m, a }: Op): boolean {
       return (wert as unknown[]).includes(zeile[spalte]);
     case "gte":
       return (zeile[spalte] as string | number) >= (wert as string | number);
+    case "lt":
+      return (zeile[spalte] as string | number) < (wert as string | number);
     case "ilike":
       return ilike(String(wert)).test(String(zeile[spalte] ?? ""));
     case "not":
