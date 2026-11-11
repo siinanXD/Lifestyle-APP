@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireConsent } from "../../../../../lib/consent/require-consent";
 import { createClient } from "../../../../../lib/supabase/server";
 import { saetzeDesWorkouts } from "../../../../../lib/training/log";
+import { ladePlantag, type Planposition } from "../../../../../lib/training/plan-ablauf";
 import { Protokoll } from "./protokoll";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default async function ProtokollPage({ params }: { params: Promise<{ work
   await requireConsent("B", `/training/protokoll/${workoutId}`);
   const supabase = await createClient();
   const [workout, uebungen, zuletzt, saetze] = await Promise.all([
-    supabase.from("workouts").select("id").eq("id", workoutId).maybeSingle(),
+    supabase.from("workouts").select("id, plan_id, plan_day_no").eq("id", workoutId).maybeSingle(),
     supabase.from("exercises").select("id, name").order("name"),
     supabase.from("workout_sets").select("exercise_id").order("created_at", { ascending: false }).limit(50),
     saetzeDesWorkouts(supabase as never, workoutId),
@@ -23,5 +24,13 @@ export default async function ProtokollPage({ params }: { params: Promise<{ work
   const rang = new Map<string, number>();
   for (const { exercise_id } of zuletzt.data) if (!rang.has(exercise_id)) rang.set(exercise_id, rang.size);
   const sortiert = [...uebungen.data].sort((a, b) => (rang.get(a.id) ?? Infinity) - (rang.get(b.id) ?? Infinity));
-  return <Protokoll workoutId={workoutId} uebungen={sortiert} saetze={saetze.daten} />;
+  // Training aus dem Plan (SIN-1285): die Übungen des Plantags als Vorgabe.
+  let geplant: Planposition[] = [];
+  const { plan_id, plan_day_no } = workout.data as { plan_id?: string | null; plan_day_no?: number | null };
+  if (plan_id && plan_day_no) {
+    const tag = await ladePlantag(supabase as never, plan_id, plan_day_no);
+    if (!tag.ok) throw new Error("Training konnte nicht geladen werden");
+    geplant = tag.daten;
+  }
+  return <Protokoll workoutId={workoutId} uebungen={sortiert} saetze={saetze.daten} geplant={geplant} />;
 }

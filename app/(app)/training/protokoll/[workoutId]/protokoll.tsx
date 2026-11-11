@@ -6,6 +6,7 @@ import { createClient } from "../../../../../lib/supabase/client";
 import { beendeWorkout, letzteSaetze, loescheSatz, saetzeDesWorkouts, speichereSatz } from "../../../../../lib/training/log";
 
 type Uebung = { id: string; name: string };
+type Vorgabe = { exercise_id: string; name: string; sets: number; rep_min: number; rep_max: number };
 type Zeile = {
   exercise_id: string;
   exercises: { name: string } | null;
@@ -26,11 +27,25 @@ const beschreibe = (z: Zeile) =>
     .filter(Boolean)
     .join(" · ");
 
-export function Protokoll({ workoutId, uebungen, saetze: start }: { workoutId: string; uebungen: Uebung[]; saetze: Zeile[] }) {
+export function Protokoll({
+  workoutId,
+  uebungen,
+  saetze: start,
+  geplant = [],
+}: {
+  workoutId: string;
+  uebungen: Uebung[];
+  saetze: Zeile[];
+  /** Übungen des Plantags (SIN-1285); leer = freies Training. */
+  geplant?: Vorgabe[];
+}) {
   const router = useRouter();
   const [saetze, setSaetze] = useState(start);
-  const [uebung, setUebung] = useState(uebungen[0]?.id ?? "");
-  const [wdh, setWdh] = useState("");
+  // Mit Plan startet die Auswahl bei der ersten geplanten Übung, die noch offen ist; die Wiederholungen sind mit dem unteren Ziel vorbelegt.
+  const erledigt = (v: Vorgabe, liste: Zeile[]) => liste.filter((s) => s.exercise_id === v.exercise_id).length;
+  const ersteOffene = geplant.find((v) => erledigt(v, start) < v.sets) ?? geplant[0];
+  const [uebung, setUebung] = useState(ersteOffene?.exercise_id ?? uebungen[0]?.id ?? "");
+  const [wdh, setWdh] = useState(ersteOffene ? String(ersteOffene.rep_min) : "");
   const [gewicht, setGewicht] = useState("");
   const [wackelig, setWackelig] = useState(false);
   const [schmerz, setSchmerz] = useState(false);
@@ -45,6 +60,8 @@ export function Protokoll({ workoutId, uebungen, saetze: start }: { workoutId: s
     angefasst.current = false;
     setGewicht("");
     setUebung(id);
+    const vorgabe = geplant.find((v) => v.exercise_id === id);
+    if (vorgabe) setWdh(String(vorgabe.rep_min));
   }
   useEffect(() => {
     if (!uebung) return;
@@ -116,6 +133,24 @@ export function Protokoll({ workoutId, uebungen, saetze: start }: { workoutId: s
   return (
     <main className="page stack" data-narrow>
       <h1>Training</h1>
+      {geplant.length > 0 && (
+        <section className="card stack" aria-label="Geplant">
+          <h2>Geplant</h2>
+          <ul className="sets">
+            {geplant.map((v) => (
+              <li key={v.exercise_id}>
+                <span>
+                  {v.name}: {v.sets} × {v.rep_min}–{v.rep_max}
+                </span>
+                <button type="button" className="link-button" aria-current={uebung === v.exercise_id ? "true" : undefined}
+                  aria-label={`${v.name} auswählen`} onClick={() => waehle(v.exercise_id)}>
+                  {Math.min(erledigt(v, saetze), v.sets)} von {v.sets}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="field">
         <label htmlFor="uebung">Übung</label>
         <select id="uebung" className="input" value={uebung} onChange={(e) => waehle(e.target.value)}>
