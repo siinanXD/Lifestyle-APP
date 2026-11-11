@@ -56,6 +56,9 @@ export default async function TrainingPage() {
       <Link href="/training/uebungen" className="link">
         Übungsbibliothek
       </Link>
+      <Link href="/training/verlauf" className="link">
+        Verlauf
+      </Link>
       <section className="stack">
         <h2>Letzte Trainings</h2>
         {workouts.daten.length === 0 ? (
