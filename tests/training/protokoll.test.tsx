@@ -18,6 +18,11 @@ const requireConsent = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/training/log", () => log);
+// Ohne Plan: „Heute dran“ hat eigene Tests in tests/training/plan-seite.test.tsx.
+vi.mock("../../lib/training/plan-ablauf", async (original) => ({
+  ...(await original<object>()),
+  ladeAktivenPlan: async () => ({ ok: true, daten: null }),
+}));
 vi.mock("../../lib/consent/require-consent", () => ({ requireConsent }));
 vi.mock("../../lib/supabase/client", () => ({ createClient: () => ({}) }));
 vi.mock("../../lib/supabase/server", () => ({ createClient: serverClient }));
