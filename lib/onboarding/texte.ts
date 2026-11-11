@@ -37,16 +37,8 @@ export const EINSCHRAENKUNGEN = {
   sonstiges: "Sonstiges",
 } as const;
 
-// Schlüssel wie profiles.equipment laut SIN-1264.
-export const GERAETE = {
-  keine: "Nichts, nur ich",
-  kurzhanteln: "Kurzhanteln",
-  langhantel: "Langhantel",
-  kabelzug: "Kabelzug",
-  baender: "Bänder",
-  kardio: "Kardiogerät",
-  studio: "Fitnessstudio",
-} as const;
+// Geräte stehen in lib/training/geraete.ts (SIN-1271), damit Onboarding, Bibliothek und Konto dieselben Schlüssel nutzen.
+export { GERAETE } from "../training/geraete";
 
 export const HINWEIS_FREITEXT = "Bitte keine Diagnosen oder Medikamente eintragen.";
 export const NICHT_ANGEGEBEN = "nicht angegeben";

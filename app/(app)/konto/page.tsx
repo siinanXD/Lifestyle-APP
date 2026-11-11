@@ -8,6 +8,9 @@ export default function AccountPage() {
       <a href="/passwort-neu" className="link">
         Passwort ändern
       </a>
+      <Link href="/konto/geraete" className="link">
+        Meine Geräte
+      </Link>
       <Link href="/konto/einwilligungen" className="link">
         Einwilligungen
       </Link>

@@ -1,3 +1,5 @@
+import { GERAETE as WAEHLBARE_GERAETE } from "./geraete";
+
 // Übungsbibliothek (SIN-1268): reine Filterlogik, damit Seite und Tests dieselbe Regel nutzen.
 export type Katalogeintrag = { id: string; name: string; category: string; muscle_groups: string[]; equipment: string[] };
 
@@ -30,15 +32,8 @@ const MUSKELN: Record<string, string> = {
   trizeps: "Trizeps",
 };
 
-const GERAETE: Record<string, string> = {
-  kurzhanteln: "Kurzhanteln",
-  langhantel: "Langhantel",
-  kabelzug: "Kabelzug",
-  baender: "Bänder",
-  kardio: "Kardiogerät",
-  flachbank: "Flachbank",
-  kniebeugenstaender: "Kniebeugenständer",
-};
+// Geräte, die nur im Katalog vorkommen (Zubehör); die wählbaren stehen in geraete.ts.
+const GERAETE: Record<string, string> = { ...WAEHLBARE_GERAETE, flachbank: "Flachbank", kniebeugenstaender: "Kniebeugenständer" };
 
 export const kategorieText = (k: string) => KATEGORIEN[k] ?? k;
 export const muskelText = (m: string) => MUSKELN[m] ?? m.charAt(0).toUpperCase() + m.slice(1);
