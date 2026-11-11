@@ -10,7 +10,7 @@ import { sender } from "../../lib/offline/senden";
 import { queue, reiheEin, setzeQueue, synchronisiere } from "../../lib/offline/sync";
 
 // Netz und Sitzung lassen sich je Test umschalten; dahinter liegt der Demo-Speicher (lib/demo), derselbe Abfrageweg wie mit Supabase.
-const netz = vi.hoisted(() => ({ offline: false, angemeldet: true, anfragen: 0 }));
+const netz = vi.hoisted(() => ({ offline: false, angemeldet: true, anfragen: 0, nutzer: "u1" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("../../lib/supabase/client", () => ({
   createClient: () => {
@@ -21,7 +21,10 @@ vi.mock("../../lib/supabase/client", () => ({
       });
     const echt = demoServerClient();
     return {
-      auth: { getUser: async () => ({ data: { user: netz.angemeldet ? { id: "u1" } : null } }) },
+      auth: {
+        getUser: async () => ({ data: { user: netz.angemeldet ? { id: netz.nutzer } : null } }),
+        getSession: async () => ({ data: { session: netz.angemeldet ? { user: { id: netz.nutzer } } : null } }),
+      },
       from: (tabelle: string) => {
         netz.anfragen++;
         // Wie beim echten Client: Die Kette lässt sich offline bauen, erst das Absenden scheitert.
@@ -40,7 +43,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "on");
   setzeZurueck();
   setzeQueue(memorySpeicher());
-  Object.assign(netz, { offline: false, angemeldet: true, anfragen: 0 });
+  Object.assign(netz, { offline: false, angemeldet: true, anfragen: 0, nutzer: "u1" });
   fuehreAbfrage("workouts", [{ m: "insert", a: [{ id: "w1", user_id: "u1" }] }]);
 });
 afterEach(async () => {
@@ -122,6 +125,17 @@ describe("Abgleich", () => {
     netz.angemeldet = true;
     expect(await synchronisiere()).toMatchObject({ gesendet: 1, offen: 0 });
     expect(saetze()).toHaveLength(1);
+  });
+
+  test("Einträge eines anderen Kontos auf demselben Gerät werden verworfen, nie gesendet", async () => {
+    netz.offline = true;
+    await reiheEin("satz", satz()); // u1 erfasst offline und meldet sich ab
+    await synchronisiere();
+    expect(await queue().alle()).toMatchObject([{ nutzer: "u1" }]);
+    Object.assign(netz, { offline: false, nutzer: "u2" }); // u2 meldet sich am selben Gerät an
+    expect(await synchronisiere({ sofort: true })).toMatchObject({ gesendet: 0, offen: 0 });
+    expect(saetze()).toEqual([]);
+    expect(await queue().alle()).toEqual([]);
   });
 
   test("leere Warteschlange fragt weder Sitzung noch Server an", async () => {

@@ -18,11 +18,24 @@ export function beobachte(fn: (stand: Stand) => void) {
   return () => void hoerer.delete(fn);
 }
 
-async function angemeldet(client: ReturnType<typeof createClient>) {
+type Client = ReturnType<typeof createClient>;
+
+/** Vom Auth-Server bestätigte Person; offline oder abgemeldet → undefined, dann wird nicht gesendet. */
+async function angemeldet(client: Client): Promise<string | undefined> {
   try {
-    return Boolean((await client.auth.getUser()).data.user);
+    return (await client.auth.getUser()).data.user?.id;
   } catch {
-    return false; // offline lässt sich die Sitzung nicht prüfen; dann wird auch nicht gesendet
+    return undefined;
+  }
+}
+
+/** Person aus der lokalen Sitzung, ohne Netz: damit ein offline erfasster Eintrag weiß, wem er gehört. */
+async function lokaleNutzerId(client: Client): Promise<string | undefined> {
+  try {
+    const { data } = (await client.auth.getSession()) as { data: { session?: { user?: { id?: string } } | null; user?: { id?: string } | null } };
+    return data.session?.user?.id ?? data.user?.id;
+  } catch {
+    return undefined;
   }
 }
 
@@ -43,7 +56,10 @@ export function synchronisiere({ sofort = false }: { sofort?: boolean } = {}): P
     const eintraege = await q.alle();
     if (eintraege.length === 0) return { gesendet: 0, offen: 0, fehlgeschlagen: 0 };
     const client = createClient();
-    if (!(await angemeldet(client))) return null;
+    const nutzer = await angemeldet(client);
+    if (!nutzer) return null;
+    // Einträge eines anderen Kontos auf diesem Gerät (abgemeldet, bevor gesendet wurde) gehen nie unter dem jetzigen Konto hinaus.
+    for (const e of eintraege) if (e.nutzer && e.nutzer !== nutzer) await q.entfernen(e.id);
     if (sofort) {
       for (const e of eintraege) {
         if (e.naechsterVersuchAb && !e.fehlgeschlagen) await q.aktualisieren({ ...e, naechsterVersuchAb: undefined }, e);
@@ -67,7 +83,8 @@ export function synchronisiere({ sofort = false }: { sofort?: boolean } = {}): P
 
 /** Legt den Eintrag ab (übersteht Neuladen und Offline-Zeiten) und stößt das Senden an, ohne darauf zu warten. */
 export async function reiheEin(art: Art, daten: unknown): Promise<Eintrag> {
-  const eintrag = neuerEintrag(art, daten);
+  const nutzer = await lokaleNutzerId(createClient());
+  const eintrag = { ...neuerEintrag(art, daten), ...(nutzer && { nutzer }) };
   await queue().hinzufuegen(eintrag);
   void synchronisiere();
   return eintrag;
