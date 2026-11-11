@@ -54,6 +54,7 @@ const DEFAULTS: Record<string, () => Zeile> = {
   consents: () => ({ granted_at: jetzt(), revoked_at: null }),
   water_logs: () => ({ logged_at: jetzt() }),
   workouts: () => ({ started_at: jetzt(), ended_at: null, regeneration: null, note: null }),
+  meals: () => ({ eaten_at: jetzt(), amount_note: null, kcal: null, protein_g: null, carbs_g: null, fat_g: null, source: "manuell", estimated: false }),
   activity_logs: () => ({ started_at: jetzt(), distance_km: null, effort: null, note: null }),
   workout_sets: () => ({ technique: "sauber", pain: false, created_at: jetzt() }),
   body_measurements: () => ({ measured_on: jetzt().slice(0, 10) }),
