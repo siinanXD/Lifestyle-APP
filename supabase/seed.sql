@@ -21,3 +21,19 @@ values
   ('rudern-kurzhantel', 'Rudern mit Kurzhantel', 'kraft', '{ruecken,bizeps}', '{kurzhanteln}',
    'Eine Hand und ein Knie auf der Bank abstützen, Rücken gerade, Hantel zur Hüfte ziehen und kontrolliert wieder absenken.')
 on conflict (slug) do nothing;
+
+-- SIN-1266: belastete Körperbereiche und Schwierigkeit für die Platzhalter-Übungen. Neutrale Metadaten, keine medizinische Aussage.
+update lifestyle.exercises e
+set joints = v.joints, difficulty = v.difficulty
+from (values
+  ('liegestuetz', '{schulter,handgelenk}'::text[], 1),
+  ('kniebeuge-koerpergewicht', '{knie,huefte}'::text[], 1),
+  ('plank', '{schulter,ruecken}'::text[], 1),
+  ('kniebeuge-langhantel', '{knie,huefte,ruecken}'::text[], 2),
+  ('bankdruecken-kurzhantel', '{schulter,handgelenk}'::text[], 2),
+  ('joggen', '{knie,huefte}'::text[], 1),
+  ('huefte-kreisen', '{huefte}'::text[], 1),
+  ('oberschenkel-dehnen', '{knie}'::text[], 1),
+  ('rudern-kurzhantel', '{ruecken,schulter}'::text[], 1)
+) as v (slug, joints, difficulty)
+where e.slug = v.slug;

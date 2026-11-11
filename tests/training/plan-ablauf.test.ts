@@ -91,3 +91,17 @@ describe("Plan im Speicher", () => {
     expect(neu.source).toBe("manuell");
   });
 });
+
+// SIN-1266: Mit Einschränkung „knie“ lässt die Engine alle Übungen aus, die das Knie belasten.
+test("Plan aus dem Katalog nimmt Rücksicht auf Einschränkungen (joints)", async () => {
+  vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "on");
+  setzeZurueck();
+  const client = demoServerClient() as never;
+  const eingabe = await ladePlanEingabe(client);
+  if (!eingabe.ok) throw new Error(eingabe.fehler);
+  const plan = erstellePlan({ ...eingabe.daten.angaben, einschraenkungen: ["knie"] }, eingabe.daten.katalog);
+  const slugs = plan.tage.flatMap((t) => t.positionen.map((p) => p.uebung.slug));
+  expect(slugs.length).toBeGreaterThan(0);
+  expect(slugs.some((s) => s.startsWith("kniebeuge"))).toBe(false);
+  expect(plan.hinweise).toContain("uebung_angepasst");
+});

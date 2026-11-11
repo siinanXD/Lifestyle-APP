@@ -77,12 +77,12 @@ test("eine alte Comeback-Angabe zählt nicht mehr", async () => {
   expect(r.daten.angaben.comebackStufe).toBeUndefined();
 });
 
-test("leeres Profil ergibt leere Angaben; Katalog bekommt joints und variant_of als Platzhalter", async () => {
-  const { client } = fake({ consents: { data: [], error: null }, profiles: { data: { goals: [], equipment: [] }, error: null }, exercises: { data: [uebung], error: null } });
+test("leeres Profil ergibt leere Angaben; Katalog kommt mit joints und variant_of", async () => {
+  const { client } = fake({ consents: { data: [], error: null }, profiles: { data: { goals: [], equipment: [] }, error: null }, exercises: { data: [{ ...uebung, joints: ["knie"], variant_of: null }], error: null } });
   const r = await ladePlanEingabe(client);
   if (!r.ok) throw new Error(r.fehler);
   expect(r.daten.angaben).toEqual({});
-  expect(r.daten.katalog).toEqual([{ ...uebung, joints: [], variant_of: null }]);
+  expect(r.daten.katalog).toEqual([{ ...uebung, joints: ["knie"], variant_of: null }]);
 });
 
 test("Lesefehler kommt als Ergebnis zurück", async () => {
