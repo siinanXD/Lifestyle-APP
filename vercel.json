@@ -1,0 +1,4 @@
+{
+  "build": { "env": { "NEXT_PUBLIC_DEMO_MODE": "on" } },
+  "env": { "NEXT_PUBLIC_DEMO_MODE": "on" }
+}
