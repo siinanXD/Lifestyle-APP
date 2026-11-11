@@ -1,4 +1,5 @@
 import type { createClient } from "../supabase/client";
+import { loescheAktivitaet } from "./aktivitaet";
 import { fuehreAus, type Ergebnis } from "./log";
 
 // Trainingsverlauf (SIN-1279): Workouts und Aktivitäten in einer Liste, einzeln löschbar (docs/PRIVACY.md Abschnitt 6).
@@ -56,6 +57,5 @@ export async function ladeVerlauf(client: Client, { vor }: { vor?: string } = {}
 
 // Sätze hängen per on delete cascade am Workout.
 export const loescheWorkout = (client: Client, id: string) => fuehreAus<null>(client.from("workouts").delete().eq("id", id));
-export const loescheAktivitaet = (client: Client, id: string) => fuehreAus<null>(client.from("activity_logs").delete().eq("id", id));
 export const loescheEintrag = (client: Client, e: Pick<Eintrag, "art" | "id">) =>
   e.art === "workout" ? loescheWorkout(client, e.id) : loescheAktivitaet(client, e.id);

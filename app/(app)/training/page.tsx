@@ -53,6 +53,9 @@ export default async function TrainingPage() {
         </Link>
       )}
       <TrainingStarten />
+      <Link href="/training/aktivitaet" className="link">
+        Cardio oder anderen Sport eintragen
+      </Link>
       <Link href="/training/uebungen" className="link">
         Übungsbibliothek
       </Link>
