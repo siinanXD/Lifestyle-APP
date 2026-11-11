@@ -18,6 +18,11 @@ const requireConsent = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/training/log", () => log);
+// Die Übungskarte hat eigene Tests (tests/training/uebungskarte.test.tsx); hier ohne Verlauf.
+vi.mock("../../lib/training/uebungskarte", async (original) => ({
+  ...(await original<object>()),
+  ladeFruehereSaetze: async () => ({ ok: true, daten: [] }),
+}));
 // Ohne Plan: „Heute dran“ hat eigene Tests in tests/training/plan-seite.test.tsx.
 vi.mock("../../lib/training/plan-ablauf", async (original) => ({
   ...(await original<object>()),

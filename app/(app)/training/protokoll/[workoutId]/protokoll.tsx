@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "../../../../../lib/supabase/client";
+import { STANDARD_ZIEL } from "../../../../../lib/training/uebungskarte";
+import { ExerciseCard } from "./exercise-card";
 import { beendeWorkout, letzteSaetze, loescheSatz, saetzeDesWorkouts, speichereSatz } from "../../../../../lib/training/log";
 
-type Uebung = { id: string; name: string };
+type Uebung = { id: string; name: string; muscle_groups?: string[]; technique?: string };
 type Vorgabe = { exercise_id: string; name: string; sets: number; rep_min: number; rep_max: number };
 type Zeile = {
   exercise_id: string;
@@ -32,12 +34,15 @@ export function Protokoll({
   uebungen,
   saetze: start,
   geplant = [],
+  stufeKg = 2.5,
 }: {
   workoutId: string;
   uebungen: Uebung[];
   saetze: Zeile[];
   /** Übungen des Plantags (SIN-1285); leer = freies Training. */
   geplant?: Vorgabe[];
+  /** Kleinste Gewichtsstufe aus dem Profil (SIN-1271) für die Empfehlung der Übungskarte. */
+  stufeKg?: number;
 }) {
   const router = useRouter();
   const [saetze, setSaetze] = useState(start);
@@ -73,6 +78,9 @@ export function Protokoll({
       aktuell = false;
     };
   }, [uebung]);
+
+  const aktuelleUebung = uebungen.find((u) => u.id === uebung);
+  const vorgabeZiel = geplant.find((v) => v.exercise_id === uebung);
 
   async function speichern() {
     const anzahl = Number(wdh);
@@ -161,6 +169,18 @@ export function Protokoll({
           ))}
         </select>
       </div>
+      {aktuelleUebung && (
+        <ExerciseCard
+          uebung={aktuelleUebung}
+          workoutId={workoutId}
+          ziel={vorgabeZiel ? { wdhMin: vorgabeZiel.rep_min, wdhMax: vorgabeZiel.rep_max } : STANDARD_ZIEL}
+          stufeKg={stufeKg}
+          onUebernehmen={(kgWert) => {
+            angefasst.current = true;
+            setGewicht(String(kgWert));
+          }}
+        />
+      )}
       <div className="field">
         <label htmlFor="wdh">Wiederholungen</label>
         <input id="wdh" className="input" type="number" inputMode="numeric" min={0} max={MAX_WDH} step={1} autoComplete="off"

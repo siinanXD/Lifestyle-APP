@@ -11,13 +11,14 @@ export default async function ProtokollPage({ params }: { params: Promise<{ work
   const { workoutId } = await params;
   await requireConsent("B", `/training/protokoll/${workoutId}`);
   const supabase = await createClient();
-  const [workout, uebungen, zuletzt, saetze] = await Promise.all([
+  const [workout, uebungen, profil, zuletzt, saetze] = await Promise.all([
     supabase.from("workouts").select("id, plan_id, plan_day_no").eq("id", workoutId).maybeSingle(),
-    supabase.from("exercises").select("id, name").order("name"),
+    supabase.from("exercises").select("id, name, muscle_groups, technique").order("name"),
+    supabase.from("profiles").select("weight_step_kg").maybeSingle(),
     supabase.from("workout_sets").select("exercise_id").order("created_at", { ascending: false }).limit(50),
     saetzeDesWorkouts(supabase as never, workoutId),
   ]);
-  if (workout.error || uebungen.error || zuletzt.error || !saetze.ok) throw new Error("Training konnte nicht geladen werden");
+  if (workout.error || uebungen.error || profil.error || zuletzt.error || !saetze.ok) throw new Error("Training konnte nicht geladen werden");
   // Fremde oder unbekannte Workouts sind per RLS unsichtbar und sehen wie „nicht vorhanden“ aus.
   if (!workout.data) notFound();
   // Zuletzt benutzte Übungen oben, danach alphabetisch.
@@ -32,5 +33,5 @@ export default async function ProtokollPage({ params }: { params: Promise<{ work
     if (!tag.ok) throw new Error("Training konnte nicht geladen werden");
     geplant = tag.daten;
   }
-  return <Protokoll workoutId={workoutId} uebungen={sortiert} saetze={saetze.daten} geplant={geplant} />;
+  return <Protokoll workoutId={workoutId} uebungen={sortiert} saetze={saetze.daten} geplant={geplant} stufeKg={Number((profil.data as { weight_step_kg?: number | null } | null)?.weight_step_kg ?? 2.5)} />;
 }

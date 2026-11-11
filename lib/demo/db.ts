@@ -29,6 +29,7 @@ function startdaten(): Speicher {
         minutes_per_session: 30,
         experience: "anfaenger",
         equipment: ["kurzhanteln"],
+        weight_step_kg: 2.5,
       },
     ],
     consents: (["A", "B"] as const).map((kind) => ({
@@ -81,6 +82,8 @@ function ilike(muster: string) {
 function passt(zeile: Zeile, { m, a }: Op): boolean {
   const [spalte, wert] = a as [string, unknown];
   switch (m) {
+    case "neq":
+      return (zeile[spalte] ?? null) !== wert;
     case "eq":
     case "is":
       return (zeile[spalte] ?? null) === wert;
