@@ -9,8 +9,9 @@ type Zeile = Record<string, unknown>;
 type Speicher = Record<string, Zeile[]>;
 
 const jetzt = () => new Date().toISOString();
-const uebung = (slug: string, name: string, category: string, muscle_groups: string[], equipment: string[], technique: string) => ({
-  id: `demo-${slug}`, slug, name, category, muscle_groups, equipment, technique, created_at: jetzt(),
+const uebung = (slug: string, name: string, category: string, muscle_groups: string[], equipment: string[], joints: string[], difficulty: number, technique: string) => ({
+  id: `demo-${slug}`, slug, name, category, muscle_groups, equipment, joints, difficulty, variant_of: null, technique,
+  media_webm: null, media_webp: null, media_poster: null, created_at: jetzt(),
 });
 
 // Übungen wie supabase/seed.sql (Platzhalter, neutrale Technikhinweise).
@@ -34,15 +35,15 @@ function startdaten(): Speicher {
       id: `demo-consent-${kind}`, user_id: DEMO_NUTZER.id, kind, text_version: EINWILLIGUNGSTEXTE[kind].version, granted_at: jetzt(), revoked_at: null,
     })),
     exercises: [
-      uebung("liegestuetz", "Liegestütz", "bodyweight", ["brust", "trizeps", "schulter"], [], "Hände unter den Schultern aufsetzen, Körper in einer Linie halten, Brust kontrolliert absenken und wieder hochdrücken."),
-      uebung("kniebeuge-koerpergewicht", "Kniebeuge (Körpergewicht)", "bodyweight", ["beine", "gesaess"], [], "Füße schulterbreit, Gesäß nach hinten unten schieben, Oberkörper aufrecht, wieder aufstehen."),
-      uebung("plank", "Unterarmstütz (Plank)", "bodyweight", ["rumpf"], [], "Ellbogen unter den Schultern, Körper bildet eine Linie, ruhig weiteratmen."),
-      uebung("kniebeuge-langhantel", "Kniebeuge mit Langhantel", "kraft", ["beine", "gesaess", "rumpf"], ["langhantel", "kniebeugenstaender"], "Stange fest auf dem oberen Rücken, Rumpf anspannen, kontrolliert absenken und aus den Beinen aufrichten."),
-      uebung("bankdruecken-kurzhantel", "Bankdrücken mit Kurzhanteln", "kraft", ["brust", "trizeps", "schulter"], ["kurzhanteln", "flachbank"], "Schulterblätter zusammenziehen, Hanteln kontrolliert senken und über der Brust wieder nach oben drücken."),
-      uebung("rudern-kurzhantel", "Rudern mit Kurzhantel", "kraft", ["ruecken", "bizeps"], ["kurzhanteln"], "Rücken gerade, Hantel zur Hüfte ziehen und kontrolliert wieder absenken."),
-      uebung("joggen", "Joggen", "cardio", ["beine"], [], "Aufrechte Haltung, gleichmäßiger Schritt in einem Tempo, bei dem Sprechen noch möglich ist."),
-      uebung("huefte-kreisen", "Hüftkreisen", "mobility", ["huefte"], [], "Aufrecht stehen, große langsame Kreise in beide Richtungen ausführen."),
-      uebung("oberschenkel-dehnen", "Oberschenkel dehnen", "dehnen", ["beine"], [], "Im Stand die Ferse zum Gesäß führen, Position ruhig halten und gleichmäßig atmen."),
+      uebung("liegestuetz", "Liegestütz", "bodyweight", ["brust", "trizeps", "schulter"], [], ["schulter", "handgelenk"], 1, "Hände unter den Schultern aufsetzen, Körper in einer Linie halten, Brust kontrolliert absenken und wieder hochdrücken."),
+      uebung("kniebeuge-koerpergewicht", "Kniebeuge (Körpergewicht)", "bodyweight", ["beine", "gesaess"], [], ["knie", "huefte"], 1, "Füße schulterbreit, Gesäß nach hinten unten schieben, Oberkörper aufrecht, wieder aufstehen."),
+      uebung("plank", "Unterarmstütz (Plank)", "bodyweight", ["rumpf"], [], ["schulter", "ruecken"], 1, "Ellbogen unter den Schultern, Körper bildet eine Linie, ruhig weiteratmen."),
+      uebung("kniebeuge-langhantel", "Kniebeuge mit Langhantel", "kraft", ["beine", "gesaess", "rumpf"], ["langhantel", "kniebeugenstaender"], ["knie", "huefte", "ruecken"], 2, "Stange fest auf dem oberen Rücken, Rumpf anspannen, kontrolliert absenken und aus den Beinen aufrichten."),
+      uebung("bankdruecken-kurzhantel", "Bankdrücken mit Kurzhanteln", "kraft", ["brust", "trizeps", "schulter"], ["kurzhanteln", "flachbank"], ["schulter", "handgelenk"], 2, "Schulterblätter zusammenziehen, Hanteln kontrolliert senken und über der Brust wieder nach oben drücken."),
+      uebung("rudern-kurzhantel", "Rudern mit Kurzhantel", "kraft", ["ruecken", "bizeps"], ["kurzhanteln"], ["ruecken", "schulter"], 1, "Rücken gerade, Hantel zur Hüfte ziehen und kontrolliert wieder absenken."),
+      uebung("joggen", "Joggen", "cardio", ["beine"], [], ["knie", "huefte"], 1, "Aufrechte Haltung, gleichmäßiger Schritt in einem Tempo, bei dem Sprechen noch möglich ist."),
+      uebung("huefte-kreisen", "Hüftkreisen", "mobility", ["huefte"], [], ["huefte"], 1, "Aufrecht stehen, große langsame Kreise in beide Richtungen ausführen."),
+      uebung("oberschenkel-dehnen", "Oberschenkel dehnen", "dehnen", ["beine"], [], ["knie"], 1, "Im Stand die Ferse zum Gesäß führen, Position ruhig halten und gleichmäßig atmen."),
     ],
   };
 }
@@ -52,6 +53,7 @@ const DEFAULTS: Record<string, () => Zeile> = {
   consents: () => ({ granted_at: jetzt(), revoked_at: null }),
   water_logs: () => ({ logged_at: jetzt() }),
   workouts: () => ({ started_at: jetzt(), ended_at: null, regeneration: null, note: null }),
+  activity_logs: () => ({ started_at: jetzt(), distance_km: null, effort: null, note: null }),
   workout_sets: () => ({ technique: "sauber", pain: false, created_at: jetzt() }),
   body_measurements: () => ({ measured_on: jetzt().slice(0, 10) }),
   training_plans: () => ({ source: "regeln", general: false, active: true, created_at: jetzt() }),
@@ -86,6 +88,8 @@ function passt(zeile: Zeile, { m, a }: Op): boolean {
       return (wert as unknown[]).includes(zeile[spalte]);
     case "gte":
       return (zeile[spalte] as string | number) >= (wert as string | number);
+    case "lt":
+      return (zeile[spalte] as string | number) < (wert as string | number);
     case "ilike":
       return ilike(String(wert)).test(String(zeile[spalte] ?? ""));
     case "not":

@@ -58,9 +58,8 @@ export async function ladePlanEingabe(client: Client): Promise<Ergebnis<PlanEing
     }
   }
 
-  // shortcut: `joints` und `variant_of` kennt lifestyle.exercises erst mit SIN-1266; bis dahin lässt die Engine keine Übung wegen Beschwerden aus.
-  const katalog = await fuehreAus<Omit<KatalogUebung, "joints" | "variant_of">[] | null>(
-    client.from("exercises").select("id, slug, name, category, muscle_groups, equipment"),
+  const katalog = await fuehreAus<KatalogUebung[] | null>(
+    client.from("exercises").select("id, slug, name, category, muscle_groups, equipment, joints, variant_of"),
   );
   if (!katalog.ok) return katalog;
 
@@ -77,7 +76,7 @@ export async function ladePlanEingabe(client: Client): Promise<Ergebnis<PlanEing
         einschraenkungen,
         comebackStufe,
       } as Angaben),
-      katalog: (katalog.daten ?? []).map((u) => ({ ...u, joints: [], variant_of: null })),
+      katalog: (katalog.daten ?? []).map((u) => ({ ...u, joints: u.joints ?? [] })),
       ohneBeschwerden: !mitB,
     },
   };
