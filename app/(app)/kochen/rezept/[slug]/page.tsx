@@ -5,6 +5,7 @@ import { EINHEITEN, ladeGeraete, ladeVorrat } from "../../../../../lib/kochen/ku
 import { FILTER, findeRezept, kennzeichen, schlageVor, type Rezeptzutat } from "../../../../../lib/kochen/rezepte";
 import { istGrundzutat, zutatName } from "../../../../../lib/kochen/zutaten";
 import { createClient } from "../../../../../lib/supabase/server";
+import { AufListe } from "./auf-liste";
 
 // Liest Vorrat und Geräte der angemeldeten Person, um Fehlendes zu zeigen; nie vorab rendern.
 export const dynamic = "force-dynamic";
@@ -46,6 +47,7 @@ export default async function RezeptPage({ params }: { params: Promise<{ slug: s
         </ul>
         <p className="muted">Salz, Pfeffer, Öl und Wasser setzt die App voraus.</p>
         {fehlend.length > 0 ? <p>Es fehlt: {fehlend.map(zutatName).join(", ")}</p> : <p>Alles da.</p>}
+        <AufListe slug={rezept.slug} fehlend={fehlend} />
       </section>
 
       <section className="stack" aria-label="Zubereitung">
