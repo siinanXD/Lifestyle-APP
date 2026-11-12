@@ -1,8 +1,10 @@
 import type { Kuechengeraet } from "./geraete";
 import type { Einheit } from "./kueche";
+import { BASED_REZEPTE } from "./rezepte-based";
 import { istGrundzutat, type ZutatKey } from "./zutaten";
 
-// Rezeptsammlung für Smart Cooking (SIN-1626): eigene, selbst geschriebene Rezepte, keine fremden Inhalte.
+// Rezeptsammlung für Smart Cooking (SIN-1626): eigene, selbst geschriebene Rezepte, dazu gemeinfreie Rezepte mit Bild
+// aus based.cooking (siehe rezepte-based.ts).
 // Nährwerte je Portion sind grobe Schätzungen und werden in der App so gekennzeichnet.
 export type Rezeptzutat = { key: ZutatKey; menge?: number; einheit?: Einheit; optional?: true };
 export type Rezept = {
@@ -18,6 +20,10 @@ export type Rezept = {
   protein_g: number;
   zutaten: Rezeptzutat[];
   schritte: string[];
+  /** Pfad zum Foto unter public/, falls es eins gibt. */
+  bild?: string;
+  /** Herkunft, wenn das Rezept nicht selbst geschrieben ist. */
+  quelle?: "based.cooking";
 };
 
 export const FILTER = { fitness: "Fitness", schnell: "Schnell", genuss: "Sehr lecker", vegetarisch: "Vegetarisch", vegan: "Vegan" } as const;
@@ -64,7 +70,7 @@ export function schlageVor(rezepte: Rezept[], vorrat: Iterable<string>, geraete:
 
 export const findeRezept = (slug: string) => REZEPTE.find((r) => r.slug === slug);
 
-export const REZEPTE: Rezept[] = [
+const EIGENE: Rezept[] = [
   {
     slug: "ruehrei-brot",
     name: "Rührei mit Brot",
@@ -658,3 +664,5 @@ export const REZEPTE: Rezept[] = [
     ],
   },
 ];
+
+export const REZEPTE: Rezept[] = [...EIGENE, ...BASED_REZEPTE];

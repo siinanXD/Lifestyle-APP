@@ -25,7 +25,7 @@ export const ZUTATEN = {
   kaese: { name: "Käse", auch: ["Gouda", "Reibekäse", "geriebener Käse", "Emmentaler", "Streukäse", "Käsescheiben"] },
   mozzarella: { name: "Mozzarella" },
   feta: { name: "Feta", auch: ["Hirtenkäse", "Schafskäse"] },
-  parmesan: { name: "Parmesan", auch: ["Grana Padano"] },
+  parmesan: { name: "Parmesan", auch: ["Grana Padano", "Pecorino"] },
   schinken: { name: "Schinken", auch: ["Kochschinken", "Putenbrust Aufschnitt"] },
   speck: { name: "Speck", auch: ["Bacon", "Speckwürfel"] },
 
@@ -81,6 +81,30 @@ export const ZUTATEN = {
   pesto: { name: "Pesto" },
   zucker: { name: "Zucker" },
   backpulver: { name: "Backpulver" },
+
+  // Für die Rezepte aus based.cooking dazugekommen.
+  haehnchenschenkel: { name: "Hähnchenschenkel", auch: ["Hähnchenkeulen", "Hähnchenunterschenkel", "Hähnchenoberschenkel"] },
+  schnitzelfleisch: { name: "Schnitzelfleisch", auch: ["Kalbsschnitzel", "Schweineschnitzel", "Schnitzel", "Putenschnitzel"] },
+  bratwurst: { name: "Bratwurst", auch: ["Bratwürste", "Salsiccia", "grobe Bratwurst"] },
+  fleischwurst: { name: "Fleischwurst", auch: ["Lyoner", "Falukorv", "Wiener Würstchen", "Würstchen"] },
+  mayonnaise: { name: "Mayonnaise", auch: ["Mayo", "Salatmayonnaise"] },
+  bechamel: { name: "Béchamelsauce", auch: ["Bechamelsauce", "Bechamel", "helle Sauce"] },
+  lauch: { name: "Lauch", auch: ["Porree"] },
+  fruehlingszwiebel: { name: "Frühlingszwiebeln", auch: ["Frühlingszwiebel", "Lauchzwiebeln", "Lauchzwiebel"] },
+  ingwer: { name: "Ingwer" },
+  chili: { name: "Chili", auch: ["Chilischote", "Chiliflocken", "Peperoni"] },
+  gewuerzgurke: { name: "Gewürzgurken", auch: ["Gewürzgurke", "Cornichons", "Essiggurken", "saure Gurken"] },
+  apfelmus: { name: "Apfelmus", auch: ["Apfelmark"] },
+  tahini: { name: "Tahini", auch: ["Tahin", "Sesammus", "Sesampaste"] },
+  paniermehl: { name: "Paniermehl", auch: ["Semmelbrösel"] },
+  natron: { name: "Natron", auch: ["Backnatron"] },
+  weisswein: { name: "Weißwein" },
+  rotwein: { name: "Rotwein" },
+  oregano: { name: "Oregano" },
+  paprikapulver: { name: "Paprikapulver", auch: ["Paprika edelsüß", "Paprikagewürz"] },
+  zimt: { name: "Zimt" },
+  kreuzkuemmel: { name: "Kreuzkümmel", auch: ["Cumin"] },
+  garam_masala: { name: "Garam Masala" },
 } as const satisfies Record<string, Zutat>;
 
 export type ZutatKey = keyof typeof ZUTATEN;

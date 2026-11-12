@@ -32,6 +32,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Nicht geschützt: Next-Assets, PWA-Dateien (Service Worker, Manifest, Icons).
-  matcher: ["/((?!_next/|sw\.js|manifest\.webmanifest|icon-).*)"],
+  // Nicht geschützt: Next-Assets, PWA-Dateien (Service Worker, Manifest, Icons) und die Rezeptfotos
+  // (public/rezepte, gemeinfreie Bilder ohne Nutzerdaten; sonst liefe für jedes Foto eine Auth-Prüfung).
+  matcher: ["/((?!_next/|sw\.js|manifest\.webmanifest|icon-|rezepte/).*)"],
 };

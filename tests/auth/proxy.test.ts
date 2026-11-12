@@ -53,3 +53,12 @@ describe("proxy (SIN-1571)", () => {
     expect(res.status).toBe(200);
   });
 });
+
+test("Matcher: Rezeptfotos und PWA-Dateien laufen nicht durch den Route-Schutz, App-Seiten schon", async () => {
+  const { config } = await import("../../proxy");
+  const trifft = (pfad: string) => new RegExp(`^${config.matcher[0]}$`).test(pfad);
+  expect(trifft("/rezepte/carbonara.webp")).toBe(false);
+  expect(trifft("/icon-192.png")).toBe(false);
+  expect(trifft("/_next/static/x.js")).toBe(false);
+  for (const pfad of ["/", "/kochen", "/kochen/rezept/carbonara", "/kochen/einkauf", "/essen", "/api/barcode/123", "/konto/rezepte/x"]) expect(trifft(pfad), pfad).toBe(true);
+});
