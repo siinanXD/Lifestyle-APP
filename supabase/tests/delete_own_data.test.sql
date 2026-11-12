@@ -53,6 +53,12 @@ insert into lifestyle.habit_checks (habit_id, user_id, day)
 values
   ('60000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000a', '2026-11-01'),
   ('60000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000b', '2026-11-01');
+insert into lifestyle.kitchen_appliances (user_id, kind)
+values ('00000000-0000-0000-0000-00000000000a', 'ofen'), ('00000000-0000-0000-0000-00000000000b', 'ofen');
+insert into lifestyle.pantry_items (user_id, name)
+values ('00000000-0000-0000-0000-00000000000a', 'Testvorrat'), ('00000000-0000-0000-0000-00000000000b', 'Testvorrat');
+insert into lifestyle.shopping_items (user_id, name)
+values ('00000000-0000-0000-0000-00000000000a', 'Testeinkauf'), ('00000000-0000-0000-0000-00000000000b', 'Testeinkauf');
 
 -- Zählt die Zeilen einer Person über alle Tabellen in lifestyle mit Spalte user_id; neue Tabellen zählen automatisch mit.
 create function pg_temp.zeilen_von(nutzer uuid) returns int
@@ -69,12 +75,12 @@ begin
   end loop;
   return summe;
 end $$;
-select is(pg_temp.zeilen_von('00000000-0000-0000-0000-00000000000a'), 14, 'A hat vor dem Löschen in jeder Nutzertabelle eine Zeile');
+select is(pg_temp.zeilen_von('00000000-0000-0000-0000-00000000000a'), 17, 'A hat vor dem Löschen in jeder Nutzertabelle eine Zeile');
 -- Kommt eine Tabelle mit user_id dazu, ohne dass dieser Test dort eine Zeile anlegt, wird er rot.
 select is(
   (select count(*)::int from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace ns on ns.oid = c.relnamespace
    where ns.nspname = 'lifestyle' and c.relkind in ('r', 'p') and a.attname = 'user_id' and not a.attisdropped),
-  14, 'der Test deckt jede Tabelle mit user_id ab');
+  17, 'der Test deckt jede Tabelle mit user_id ab');
 
 -- Konto aus einer anderen App (C): ohne Profil, sieht nichts Fremdes, legt das eigene an.
 set local role authenticated;
@@ -99,7 +105,7 @@ select is_empty(
 select is(
   (select count(*)::int from lifestyle.profiles where id <> '00000000-0000-0000-0000-00000000000a')
   + pg_temp.zeilen_von('00000000-0000-0000-0000-00000000000b'),
-  16,
+  19,
   'die Daten von B und C bleiben'
 );
 
