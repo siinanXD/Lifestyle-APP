@@ -55,6 +55,9 @@ const DEFAULTS: Record<string, () => Zeile> = {
   water_logs: () => ({ logged_at: jetzt() }),
   workouts: () => ({ started_at: jetzt(), ended_at: null, regeneration: null, note: null }),
   meals: () => ({ eaten_at: jetzt(), amount_note: null, kcal: null, protein_g: null, carbs_g: null, fat_g: null, source: "manuell", estimated: false }),
+  pantry_items: () => ({ ingredient_key: null, amount: null, unit: null, location: "kuehlschrank", best_before: null, source: "manuell" }),
+  shopping_items: () => ({ ingredient_key: null, amount: null, unit: null, done: false, recipe_slug: null }),
+  kitchen_appliances: () => ({ model: null }),
   activity_logs: () => ({ started_at: jetzt(), distance_km: null, effort: null, note: null }),
   workout_sets: () => ({ technique: "sauber", pain: false, created_at: jetzt() }),
   body_measurements: () => ({ measured_on: jetzt().slice(0, 10) }),
@@ -63,6 +66,7 @@ const DEFAULTS: Record<string, () => Zeile> = {
 // Eindeutigkeit wie in den Migrationen; Verstoß → 23505 wie bei Postgres.
 const EINDEUTIG: Record<string, (neu: Zeile, alt: Zeile) => boolean> = {
   consents: (n, a) => n.kind === a.kind && n.revoked_at === null && a.revoked_at === null,
+  kitchen_appliances: (n, a) => n.user_id === a.user_id && n.kind === a.kind,
   workout_sets: (n, a) => n.workout_id === a.workout_id && n.set_no === a.set_no && n.exercise_id === a.exercise_id,
 };
 const FREMDSCHLUESSEL: Record<string, string> = { workouts: "workout_id", exercises: "exercise_id", training_plans: "plan_id" };
