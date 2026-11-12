@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import KochenPage from "../../app/(app)/kochen/page";
@@ -76,8 +77,8 @@ describe("Rezeptsammlung", () => {
     }
   });
   test("vegane Rezepte sind auch vegetarisch und enthalten nichts Tierisches", () => {
-    const tierisch = ["ei", "haehnchenbrust", "hackfleisch", "lachs", "thunfisch", "magerquark", "skyr", "joghurt", "huettenkaese", "kaese", "mozzarella", "feta", "parmesan", "schinken", "speck", "milch", "butter", "sahne", "frischkaese", "honig"];
-    const fleischFisch = ["haehnchenbrust", "hackfleisch", "lachs", "thunfisch", "schinken", "speck"];
+    const tierisch = ["ei", "haehnchenbrust", "hackfleisch", "lachs", "thunfisch", "magerquark", "skyr", "joghurt", "huettenkaese", "kaese", "mozzarella", "feta", "parmesan", "schinken", "speck", "milch", "butter", "sahne", "frischkaese", "honig", "haehnchenschenkel", "schnitzelfleisch", "bratwurst", "fleischwurst", "mayonnaise", "bechamel"];
+    const fleischFisch = ["haehnchenbrust", "hackfleisch", "lachs", "thunfisch", "schinken", "speck", "haehnchenschenkel", "schnitzelfleisch", "bratwurst", "fleischwurst"];
     for (const x of REZEPTE) {
       const keys = x.zutaten.map((z) => z.key as string);
       if (x.kost === "vegan") {
@@ -95,6 +96,15 @@ describe("Rezeptsammlung", () => {
       expect(x.kcal, x.slug).toBeLessThan(1200);
       expect(x.protein_g * 4, x.slug).toBeLessThan(x.kcal);
     }
+  });
+  test("übernommene Rezepte: mindestens 30, jedes mit Quelle und einem Foto, das es unter public/ gibt; eigene Rezepte ohne Quelle", () => {
+    const uebernommen = REZEPTE.filter((x) => x.quelle);
+    expect(uebernommen.length).toBeGreaterThanOrEqual(30);
+    for (const x of uebernommen) {
+      expect(x.bild, x.slug).toBe(`/rezepte/${x.slug}.webp`);
+      expect(existsSync(`public${x.bild}`), x.slug).toBe(true);
+    }
+    for (const x of REZEPTE.filter((y) => y.bild)) expect(x.quelle, x.slug).toBe("based.cooking");
   });
   test("keine Heil- oder Diagnoseaussagen in Namen und Schritten", () => {
     for (const x of REZEPTE) expect([x.name, ...x.schritte].join(" "), x.slug).not.toMatch(/diagnos|heil|therap|abnehm|entgift|gesund/i);
@@ -161,6 +171,16 @@ describe("Seiten", () => {
     expect(within(screen.getByRole("region", { name: "Zubereitung" })).getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByText(/Je Portion etwa 560 kcal und 40 g Eiweiß/)).toBeTruthy();
     expect(screen.getByText(/grobe Schätzungen/)).toBeTruthy();
+  });
+
+  test("übernommenes Rezept zeigt Foto und Herkunft, ein eigenes nicht", async () => {
+    render(await RezeptPage({ params: Promise.resolve({ slug: "carbonara" }) }));
+    expect(screen.getByRole("img", { name: "Foto: Spaghetti Carbonara" }).getAttribute("src")).toBe("/rezepte/carbonara.webp");
+    expect(screen.getByText(/nach based\.cooking \(gemeinfrei\)/)).toBeTruthy();
+    cleanup();
+    render(await RezeptPage({ params: Promise.resolve({ slug: "airfryer-haehnchen-pommes" }) }));
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByText(/based\.cooking/)).toBeNull();
   });
 
   test("unbekanntes Rezept liefert 404", async () => {

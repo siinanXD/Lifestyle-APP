@@ -12,6 +12,9 @@ function Karte({ v }: { v: Vorschlag }) {
       <Link href={`/kochen/rezept/${r.slug}`} className="link">
         {r.name}
       </Link>
+      {/* Schmuckbild: Der Name steht daneben, deshalb leerer Alternativtext. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- kleine, schon verkleinerte Datei; die Bildoptimierung von Vercel ist kontingentiert */}
+      {r.bild ? <img src={r.bild} alt="" className="rezept-klein" loading="lazy" width={72} height={72} /> : <span />}
       <span className="muted">
         {[`${r.minuten} Min`, ...kennzeichen(r).map((k) => FILTER[k])].join(" · ")}
       </span>
@@ -31,17 +34,17 @@ export function Rezeptvorschlaege({ vorrat, geraete }: { vorrat: string[]; gerae
   return (
     <main className="page stack" data-narrow>
       <h1>Kochen</h1>
-      <div className="actions-row">
-        <Link href="/kochen/vorrat" className="btn" data-variant="neutral">
+      <nav className="chips" aria-label="Küche">
+        <Link href="/kochen/vorrat" className="chip">
           Mein Vorrat
         </Link>
-        <Link href="/kochen/geraete" className="btn" data-variant="neutral">
+        <Link href="/kochen/geraete" className="chip">
           Küchengeräte
         </Link>
-        <Link href="/kochen/einkauf" className="btn" data-variant="neutral">
+        <Link href="/kochen/einkauf" className="chip">
           Einkaufsliste
         </Link>
-      </div>
+      </nav>
       {geraete.length === 0 && (
         <p className="muted">
           Du hast noch keine Küchengeräte eingetragen. Solange zeigt die App nur Rezepte, die ohne Gerät gehen.

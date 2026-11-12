@@ -30,6 +30,8 @@ export default async function RezeptPage({ params }: { params: Promise<{ slug: s
     <main className="page stack" data-narrow>
       <p className="eyebrow">{[`${rezept.minuten} Min`, `${rezept.portionen} ${rezept.portionen === 1 ? "Portion" : "Portionen"}`, ...kennzeichen(rezept).map((k) => FILTER[k])].join(" · ")}</p>
       <h1>{rezept.name}</h1>
+      {/* eslint-disable-next-line @next/next/no-img-element -- schon verkleinerte Datei; die Bildoptimierung von Vercel ist kontingentiert */}
+      {rezept.bild && <img src={rezept.bild} alt={`Foto: ${rezept.name}`} className="rezept-bild" />}
       {rezept.geraete.length > 0 && <p className="muted">Du brauchst: {rezept.geraete.map((g) => KUECHENGERAETE[g]).join(", ")}</p>}
       {fehlendeGeraete.length > 0 && <p role="note">Dieses Gerät ist bei dir nicht eingetragen: {fehlendeGeraete.map((g) => KUECHENGERAETE[g]).join(", ")}</p>}
 
@@ -63,6 +65,7 @@ export default async function RezeptPage({ params }: { params: Promise<{ slug: s
         Je Portion etwa {rezept.kcal} kcal und {rezept.protein_g} g Eiweiß.
       </p>
       <p className="muted">{NAEHRWERT_HINWEIS}</p>
+      {rezept.quelle === "based.cooking" && <p className="muted">Rezept und Foto nach based.cooking (gemeinfrei), übersetzt und angepasst.</p>}
       <Link href="/kochen" className="link">
         Zu den Vorschlägen
       </Link>
