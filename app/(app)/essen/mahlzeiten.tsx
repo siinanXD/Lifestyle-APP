@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
+import { barcodeDetektor, findeCode, istGueltigePortion, MELDUNGEN, skaliere, sucheProdukt, type Treffer } from "../../../lib/essen/barcode";
 import { amTag, FEHLERTEXTE, gleicherTag, HINWEIS, pruefeMahlzeit, summe, TAGE_LADEN, zuletztGegessen, type Mahlzeit } from "../../../lib/essen/mahlzeiten";
 import { reiheEin } from "../../../lib/offline/sync";
 
@@ -28,6 +29,74 @@ export function Mahlzeiten({ start }: { start: Mahlzeit[] }) {
   const [bearbeite, setBearbeite] = useState<string | null>(null); // id der Mahlzeit in Bearbeitung
   const [fehler, setFehler] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // Barcode (SIN-1295): Treffer mit Werten je 100 g; die Portion in Gramm rechnet die Felder um.
+  const [barcode, setBarcode] = useState("");
+  const [treffer, setTreffer] = useState<Treffer | null>(null);
+  const [portion, setPortion] = useState("100");
+  const [barcodeMeldung, setBarcodeMeldung] = useState("");
+  const [scannt, setScannt] = useState(false);
+  const video = useRef<HTMLVideoElement>(null);
+  const stream = useRef<MediaStream | null>(null);
+  const kannScannen = imBrowser && barcodeDetektor() !== undefined;
+
+  const mitPortion = (p: Treffer, gramm: number) => {
+    const n = skaliere(p, gramm);
+    return { name: p.name, menge: `${String(gramm).replace(".", ",")} g`, kcal: zahl(n.kcal), eiweiss: zahl(n.protein_g), kohlenhydrate: zahl(n.carbs_g), fett: zahl(n.fat_g) };
+  };
+
+  async function schlageNach(eingabe: string) {
+    setBarcodeMeldung("");
+    setBusy(true);
+    const r = await sucheProdukt(eingabe);
+    setBusy(false);
+    if (!r.ok) {
+      setTreffer(null);
+      return setBarcodeMeldung(MELDUNGEN[r.grund]);
+    }
+    setTreffer(r.produkt);
+    setBarcode(r.produkt.code);
+    setPortion("100");
+    setForm((alt) => ({ ...alt, ...mitPortion(r.produkt, 100) }));
+  }
+
+  function aenderePortion(text: string) {
+    setPortion(text);
+    const gramm = Number(text.trim().replace(",", "."));
+    if (treffer && text.trim() !== "" && istGueltigePortion(gramm)) setForm((alt) => ({ ...alt, ...mitPortion(treffer, gramm) }));
+  }
+
+  // Kamera: erst nach dem Tipp, Stream endet sofort nach dem Treffer oder beim Abbrechen, nichts wird aufgezeichnet.
+  function beendeScan() {
+    stream.current?.getTracks().forEach((spur) => spur.stop());
+    stream.current = null;
+    if (video.current) video.current.srcObject = null;
+    setScannt(false);
+  }
+
+  async function scanne() {
+    const Klasse = barcodeDetektor();
+    if (!Klasse) return;
+    setBarcodeMeldung("");
+    let eigener: MediaStream;
+    try {
+      eigener = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    } catch {
+      return setBarcodeMeldung(MELDUNGEN.kamera);
+    }
+    stream.current = eigener;
+    setScannt(true);
+    if (video.current) {
+      video.current.srcObject = eigener;
+      try {
+        await video.current.play();
+      } catch {
+        // Ohne Vorschau läuft die Erkennung trotzdem weiter.
+      }
+    }
+    const code = await findeCode(Klasse, video.current, () => stream.current === eigener);
+    if (stream.current === eigener) beendeScan();
+    if (code) await schlageNach(code);
+  }
 
   const heute = new Date();
   const istHeute = gleicherTag(tag, heute);
@@ -40,6 +109,9 @@ export function Mahlzeiten({ start }: { start: Mahlzeit[] }) {
     setBearbeite(null);
     setForm(LEER);
     setFehler([]);
+    setTreffer(null);
+    setBarcode("");
+    setBarcodeMeldung("");
   }
 
   async function speichern() {
@@ -52,7 +124,7 @@ export function Mahlzeiten({ start }: { start: Mahlzeit[] }) {
     setBusy(true);
     try {
       // Zuerst in die Warteschlange (SIN-1287), sofort anzeigen; gesendet wird danach, auch nach einer Offline-Zeit.
-      await reiheEin("mahlzeit", { id, ...pruefung.werte });
+      await reiheEin("mahlzeit", { id, ...pruefung.werte, ...(treffer && { source: "barcode", barcode: treffer.code }) });
     } catch {
       setBusy(false);
       return setFehler(["Das hat gerade nicht geklappt. Der Eintrag ist nicht gespeichert. Bitte versuch es gleich noch einmal."]);
@@ -139,6 +211,41 @@ export function Mahlzeiten({ start }: { start: Mahlzeit[] }) {
             </div>
           </div>
         )}
+        {!bearbeite && (
+          <div className="stack" role="group" aria-label="Barcode">
+            <div className="field">
+              <label htmlFor="barcode">Barcode (freiwillig)</label>
+              <input id="barcode" className="input" inputMode="numeric" autoComplete="off" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
+            </div>
+            <div className="actions-row">
+              <button type="button" className="btn" data-variant="neutral" disabled={busy || scannt} onClick={() => schlageNach(barcode)}>
+                Nachschlagen
+              </button>
+              {kannScannen && !scannt && (
+                <button type="button" className="btn" data-variant="neutral" disabled={busy} onClick={scanne}>
+                  Mit Kamera scannen
+                </button>
+              )}
+              {scannt && (
+                <button type="button" className="btn" data-variant="neutral" onClick={beendeScan}>
+                  Scan abbrechen
+                </button>
+              )}
+            </div>
+            {/* Vorschau der Kamera nur während des Scans; kein Ton, keine Aufnahme. */}
+            <video ref={video} hidden={!scannt} muted playsInline aria-label="Kamerabild für den Barcode" style={{ width: "100%", borderRadius: "var(--radius-md)" }} />
+            {barcodeMeldung && <p role="status">{barcodeMeldung}</p>}
+            {treffer && (
+              <>
+                <p className="muted">{MELDUNGEN.hinweis}</p>
+                <div className="field">
+                  <label htmlFor="portion">Portion in Gramm</label>
+                  <input id="portion" className="input" inputMode="decimal" autoComplete="off" value={portion} onChange={(e) => aenderePortion(e.target.value)} />
+                </div>
+              </>
+            )}
+          </div>
+        )}
         <div className="field">
           <label htmlFor="name">Was hast du gegessen?</label>
           <input id="name" className="input" maxLength={100} autoComplete="off" {...feld("name")} />
@@ -190,6 +297,9 @@ export function Mahlzeiten({ start }: { start: Mahlzeit[] }) {
         <h2>Mehr erfassen</h2>
         <Link href="/essen/wasser" className="link">
           Wasser
+        </Link>
+        <Link href="/kochen" className="link">
+          Kochen: Vorrat und Küchengeräte
         </Link>
       </nav>
     </main>
