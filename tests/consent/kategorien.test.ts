@@ -82,12 +82,12 @@ describe("widerrufe", () => {
     expect(aufrufe.findIndex((a) => a.tabelle === "consents" && a.methode === "update")).toBeLessThan(aufrufe.findIndex((a) => a.methode === "delete"));
   });
 
-  test("A mit „Daten löschen“ setzt die Profilangaben der eigenen Zeile zurück und löscht die Gewohnheiten", async () => {
+  test("A mit „Daten löschen“ setzt die Profilangaben der eigenen Zeile zurück und löscht Gewohnheiten und Küchendaten", async () => {
     const { client, aufrufe } = fake();
     await widerrufe(client, "A", { datenLoeschen: true });
     expect(aufrufe).toContainEqual({ tabelle: "profiles", methode: "update", args: [PROFILANGABEN_A] });
     expect(aufrufe).toContainEqual({ tabelle: "profiles", methode: "eq", args: ["id", "u1"] });
-    expect(loeschungen(aufrufe)).toEqual(["habit_checks", "habits"]);
+    expect(loeschungen(aufrufe)).toEqual(["habit_checks", "habits", "shopping_items", "pantry_items", "kitchen_appliances"]);
     expect(widerruf(aufrufe)).toHaveLength(1);
   });
 

@@ -11,7 +11,8 @@ type Client = ReturnType<typeof createClient>;
 // Pläne enthalten nur Übungen, Sätze und Wiederholungen und brauchen keine Einwilligung (Migration SIN-1282);
 // ein Widerruf von B darf sie deshalb nicht mitlöschen.
 export const TABELLEN = {
-  A: ["habit_checks", "habits"],
+  // Küche (SIN-1624): Geräte, Vorrat und Einkaufsliste sind kein Art.-9-Inhalt.
+  A: ["habit_checks", "habits", "shopping_items", "pantry_items", "kitchen_appliances"],
   B: [
     "workout_sets",
     "workouts",
