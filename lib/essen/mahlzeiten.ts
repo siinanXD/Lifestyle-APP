@@ -14,6 +14,9 @@ export type Mahlzeitwerte = {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  /** Nur gesetzt, wenn die Werte aus dem Barcode-Nachschlag stammen (SIN-1295); sonst gilt der Spalten-Default 'manuell'. */
+  source?: "manuell" | "barcode";
+  barcode?: string | null;
 };
 export type Mahlzeit = Mahlzeitwerte & { id: string };
 export type Eingabe = { name: string; menge: string; kcal: string; eiweiss: string; kohlenhydrate: string; fett: string; zeit: Date };
