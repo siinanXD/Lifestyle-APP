@@ -477,3 +477,19 @@ a.chip {
   font-size: var(--font-base);
   text-align: center;
 }
+
+/* Rezeptfotos (Smart Cooking): groß auf der Detailseite, klein in der Vorschlagsliste. */
+.rezept-bild {
+  width: 100%;
+  max-height: 16rem;
+  object-fit: cover;
+  border-radius: var(--radius-md, 12px);
+}
+
+.rezept-klein {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: var(--radius-md, 12px);
+  grid-row: span 2;
+}
