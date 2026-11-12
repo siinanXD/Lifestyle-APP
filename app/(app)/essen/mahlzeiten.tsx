@@ -298,6 +298,9 @@ export function Mahlzeiten({ start }: { start: Mahlzeit[] }) {
         <Link href="/essen/wasser" className="link">
           Wasser
         </Link>
+        <Link href="/kochen" className="link">
+          Kochen: Vorrat und Küchengeräte
+        </Link>
       </nav>
     </main>
   );
