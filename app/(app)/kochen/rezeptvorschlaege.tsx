@@ -38,6 +38,9 @@ export function Rezeptvorschlaege({ vorrat, geraete }: { vorrat: string[]; gerae
         <Link href="/kochen/geraete" className="btn" data-variant="neutral">
           Küchengeräte
         </Link>
+        <Link href="/kochen/einkauf" className="btn" data-variant="neutral">
+          Einkaufsliste
+        </Link>
       </div>
       {geraete.length === 0 && (
         <p className="muted">
