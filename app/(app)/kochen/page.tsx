@@ -1,20 +1,19 @@
-import Link from "next/link";
+import { ladeGeraete, ladeVorrat } from "../../../lib/kochen/kueche";
+import { createClient } from "../../../lib/supabase/server";
+import { Rezeptvorschlaege } from "./rezeptvorschlaege";
 
-// Übersicht Kochen (SIN-1625). Die Rezeptvorschläge kommen mit SIN-1626 auf diese Seite.
-export default function KochenPage() {
+// Rezeptvorschläge aus Vorrat und Geräten der angemeldeten Person (SIN-1626); nie vorab rendern.
+export const dynamic = "force-dynamic";
+
+export default async function KochenPage() {
+  const supabase = await createClient();
+  const [vorrat, geraete] = await Promise.all([ladeVorrat(supabase as never), ladeGeraete(supabase as never)]);
+  // Lesefehler nicht als „nichts da“ zeigen: Sonst sähe es aus, als fehle für jedes Rezept alles.
+  if (!vorrat.ok || !geraete.ok) throw new Error("Vorrat und Geräte konnten nicht geladen werden");
   return (
-    <main className="page stack" data-narrow>
-      <h1>Kochen</h1>
-      <p className="muted">Sag der App, welche Geräte du hast und was da ist. Daraus entstehen die Rezeptvorschläge.</p>
-      <Link href="/kochen/vorrat" className="btn">
-        Mein Vorrat
-      </Link>
-      <Link href="/kochen/geraete" className="btn" data-variant="neutral">
-        Meine Küchengeräte
-      </Link>
-      <Link href="/essen" className="link">
-        Zurück
-      </Link>
-    </main>
+    <Rezeptvorschlaege
+      vorrat={(vorrat.daten ?? []).flatMap((z) => (z.ingredient_key ? [z.ingredient_key] : []))}
+      geraete={(geraete.daten ?? []).map((g) => g.kind)}
+    />
   );
 }
